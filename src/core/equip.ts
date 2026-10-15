@@ -190,7 +190,6 @@ export function derive(ctx: DeriveCtx): Derived {
   s.hp *= 1 + (A.genGu || 0) * 0.015
   s.def *= 1 + (A.genGu || 0) * 0.01
   s.atk *= 1 + (A.shenShi || 0) * 0.012
-  s.pillBonus += (A.danDao || 0) * 2 // 丹道：丹药效果 +2%/点
   // 悟性影响修为（在 cultMult 中体现）
 
   // —— 装备 ——

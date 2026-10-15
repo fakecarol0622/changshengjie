@@ -48,12 +48,18 @@
           <div class="flex justify-between"><span class="dim">出货率</span><span>+{{ cur.luck }}% → <b class="jade">+{{ next.luck }}%</b></span></div>
           <div class="flex justify-between"><span class="dim">灵脉石收益</span><span>+{{ cur.lingmaiP }}% → <b class="jade">+{{ next.lingmaiP }}%</b></span></div>
         </div>
+        <div class="flex justify-between items-center text-xs mt-2">
+          <span>本境挖掘进度 <b :class="digMet ? 'jade' : 'gold'">{{ Math.min(digs, digReq) }} / {{ digReq }}</b><span class="dim2">（疏通前需先在本境挖掘）</span></span>
+        </div>
+        <div class="pbar !h-1.5 mt-1"><div class="pfill !h-full" :style="{ width: (digReq ? Math.min(100, digs / digReq * 100) : 100) + '%' }"></div></div>
         <div class="text-xs mt-2">
           疏通消耗：<b :class="g.res.lingshi >= upCost ? 'gold' : 'red'">灵石 {{ fmt(upCost) }}</b><span class="dim">（持有 {{ fmt(g.res.lingshi) }}）</span>
           · 预计耗时 <b class="gold">{{ fmtTime(upTime) }}</b>
           <span class="dim2">（后期愈发艰难，龙髓可缩短时间）</span>
         </div>
-        <button class="btn btn-gold w-full mt-2" :disabled="g.res.lingshi < upCost" @click="g.veinStartUp()">疏 通 龙 脉</button>
+        <button class="btn btn-gold w-full mt-2" :disabled="g.res.lingshi < upCost || !digMet" @click="g.veinStartUp()">
+          {{ digMet ? '疏 通 龙 脉' : `还需在本境挖掘 ${Math.max(0, digReq - digs)} 次` }}
+        </button>
       </template>
       <div class="text-xs dim2 mt-2">龙髓获取：挖掘掉落 · 每日活跃宝箱 · 坊市奇货 · 问道长阶每 10 阶首通 · 脉力暴动</div>
     </div>
@@ -128,7 +134,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import { useGame } from '../stores/game'
-import { VEIN_MAX, veinDigCost, veinEqRange, veinLingmaiP, veinLuck, veinQRange, veinQualityDist, veinTier, veinUpCost, veinUpTime } from '../data/realms'
+import { VEIN_MAX, veinDigCost, veinDigReq, veinEqRange, veinLingmaiP, veinLuck, veinQRange, veinQualityDist, veinTier, veinUpCost, veinUpTime } from '../data/realms'
 import { qColor, qName } from '../data/qualities'
 import { fmt, fmt1, fmtTime } from '../core/format'
 import ItemCard from '../components/ItemCard.vue'
@@ -141,6 +147,9 @@ const nextTierName = computed(() => veinTier(v.value.lv + 1))
 const digCost = computed(() => veinDigCost(v.value.lv))
 const upCost = computed(() => veinUpCost(v.value.lv))
 const upTime = computed(() => veinUpTime(v.value.lv))
+const digReq = computed(() => veinDigReq(v.value.lv))
+const digs = computed(() => v.value.digs || 0)
+const digMet = computed(() => digs.value >= digReq.value)
 const longsui = computed(() => g.mats['longsui'] || 0)
 const pity100 = computed(() => g.mine.pity100['v'] || 0)
 const pity500 = computed(() => g.mine.pity500['v'] || 0)

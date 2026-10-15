@@ -81,6 +81,8 @@ export function veinDigCost(lv: number): number { return 1 + Math.floor(lv * lv 
 // 疏通消耗（灵石）与耗时（毫秒）——后期陡增
 export function veinUpCost(lv: number): number { return Math.round(1000 * Math.pow(1.36, lv)) }
 export function veinUpTime(lv: number): number { return Math.round(25000 * Math.pow(1.16, lv)) }
+// 每级疏通前需先在本境完成的挖掘次数（先开采后疏通）
+export function veinDigReq(lv: number): number { return 5 + Math.ceil(lv * 0.8) }
 
 // 品质概率衰减系数：区间内偏向低品（底部常见、顶部稀有）；龙脉越深衰减越弱
 export function veinFalloff(lv: number): number {

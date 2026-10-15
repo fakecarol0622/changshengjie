@@ -11,7 +11,7 @@ import { calcPower, derive, emptyStats, genEquip, refreshScore, rollQuality, ENH
 import { makeEnemy, simulate } from '../core/battle'
 import { growNpcs, makeNpcs, makeRival, npcPower, npcRealm, rivalName } from '../core/npc'
 import { AFFIX_MAP, PREFIX_SEGS, QUALITIES, RUNE_MAP, SLOTS, SLOT_NAMES, affixPoolFor, qName } from '../data/qualities'
-import { MAJOR, MINOR, VEIN_MAX, baseHp, breakChance, cultRate, idleLingmai, idleLingshi, lvIndex, realmName, veinDigCost, veinEquipLevel, veinEqRange, veinFalloff, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
+import { MAJOR, MINOR, VEIN_MAX, baseHp, breakChance, cultRate, idleLingmai, idleLingshi, lvIndex, realmName, veinDigCost, veinDigReq, veinEquipLevel, veinEqRange, veinFalloff, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
 import { BEAST_KINDS, BEAST_MAP, BEAST_STAGES, BEAST_STAGE_SKILLS, MATERIALS, MAT_MAP, PILL_MAP, PILL_QMULT, PILL_QNAMES, RECIPES, RECIPE_MAP, SEEDS, SEED_MAP, TECH_MAP, TECHNIQUES, TECH_TIERS, TREASURE_MAP, TREASURES, beastName } from '../data/items'
 import { ACTIVITIES, CYCLE_DAYS, DUNGEONS, DIFFS, ENCOUNTERS, ENC_NAMES, ORIGINS, PHYS_CHANCE, PHYSIQUES, SPIRIT_ROOTS, WORLD_MSGS, activeActivity, chaosOpen, cycleIndex } from '../data/world'
 import { RANKS, SECTS, SECT_DAILY_TASKS, SECT_MAP, SECT_SHOP, SECT_WEEKLY_TASKS } from '../data/sects'
@@ -116,7 +116,6 @@ function rollAttrs() {
   return {
     genGu: ri(3, 8), wuXing: ri(3, 8), shenShi: ri(3, 8), qiYun: ri(3, 8),
     daoXin: ri(4, 9), meiLi: ri(3, 8), yeLi: 0, jieQi: 0, gongDe: 0,
-    qiDao: ri(0, 3), danDao: ri(0, 3), tanYou: ri(0, 3),
   }
 }
 
@@ -187,7 +186,7 @@ export const useGame = defineStore('game', {
     meditateUntil: 0,
     mine: { depth: 0, auto: false, pulls: {} as Record<string, number>, pity100: {} as Record<string, number>, pity500: {} as Record<string, number>, recent: [] as Equip[], purpleCnt: {} as Record<string, number> },
     // 烛龙脉：单线升级（疏通=时间+灵石，upgUntil 为完成时间戳，0=未在疏通）
-    vein: { lv: 1, upgUntil: 0 },
+    vein: { lv: 1, upgUntil: 0, digs: 0 },
     npcs: makeNpcs() as Npc[],
     daily: { day: 0, monthCount: 0, newbieDay: 0, realmGifts: [] as number[], daySigned: false, makeup: 3, giftTaken: false, chestTaken: false, progress: {} as Record<string, number>, taskClaimed: [] as boolean[] },
     xyu: { counts: {} as Record<string, number> },
@@ -360,13 +359,13 @@ export const useGame = defineStore('game', {
     breakChanceBase(): number {
       return breakChance(this.major, this.minor, this.attrs.wuXing, this.attrs.daoXin, this.attrs.yeLi, this.attrs.jieQi, this.derived.stats.tribBonus)
     },
-    // 器道：强化灵石折扣（洞府炼器房每级按 2 点计）
+    // 洞府·炼器房：强化灵石折扣（每级 +4%，上限 50%）
     enhanceDiscount(): number {
-      return Math.min(0.5, ((this.attrs.qiDao || 0) + this.cave.forge * 2) * 0.02)
+      return Math.min(0.5, this.cave.forge * 0.04)
     },
-    // 洗炼数值上浮（器道提升上限）
+    // 洞府·炼器房：洗炼数值上限（每级 +2%，上限 30%）
     reforgeUp(): number {
-      return 1.42 + Math.min(0.3, ((this.attrs.qiDao || 0) + this.cave.forge * 2) * 0.01)
+      return 1.42 + Math.min(0.3, this.cave.forge * 0.02)
     },
     // 共鸣详情：每条共鸣的来源与进度
     resonanceInfo(): { id: string; name: string; cls: string; req: string; desc: string; active: boolean; progress: string; contributors: string[] }[] {
@@ -495,7 +494,7 @@ export const useGame = defineStore('game', {
       const q = Number(qs)
       if (!this.pills[key]) return
       const mult = PILL_QMULT[q]
-      const pb = 1 + this.derived.stats.pillBonus / 100 // 丹道/丹道共鸣加成
+      const pb = 1 + this.derived.stats.pillBonus / 100 // 丹药效果加成
       switch (id) {
         case 'juling': {
           const mins = Math.max(10, Math.round(30 * (mult / PILL_QMULT[3]) * pb))
@@ -693,6 +692,8 @@ export const useGame = defineStore('game', {
     veinStartUp() {
       if (this.vein.lv >= VEIN_MAX) { this.toast('烛龙脉已至圆满', 'dim'); return }
       if (this.vein.upgUntil > 0) { this.toast('龙脉正在疏通中，可用龙髓加速', 'dim'); return }
+      const req = veinDigReq(this.vein.lv)
+      if ((this.vein.digs || 0) < req) { this.toast(`先在本境挖掘 ${req} 次方可疏通（当前 ${this.vein.digs || 0}）`, 'red'); return }
       const cost = veinUpCost(this.vein.lv)
       if (this.res.lingshi < cost) { this.toast(`疏通需灵石×${fmt(cost)}`, 'red'); return }
       this.res.lingshi -= cost
@@ -715,6 +716,7 @@ export const useGame = defineStore('game', {
     veinComplete() {
       if (this.vein.upgUntil <= 0) return
       this.vein.upgUntil = 0
+      this.vein.digs = 0 // 新境从头开采
       this.vein.lv++
       const lv = this.vein.lv
       const eq = veinEqRange(lv)
@@ -738,6 +740,7 @@ export const useGame = defineStore('game', {
         this.mine.pity100['v'] = (this.mine.pity100['v'] || 0) + 1
         this.mine.pity500['v'] = (this.mine.pity500['v'] || 0) + 1
         this.codex.pulls++
+        this.vein.digs = (this.vein.digs || 0) + 1 // 本境挖掘计数（疏通门槛）
         this.addTaskProgress('mine', 1)
         const act = this.activity
         const luckBase = this.derived.stats.dropLuck + veinLuck(lv) + (act?.id === 'tide' ? 40 : 0)
@@ -1334,7 +1337,7 @@ export const useGame = defineStore('game', {
         this.toast('轰！丹炉炸裂，材料尽毁，你被丹火燎伤', 'red')
         return
       }
-      let q = Math.round(accuracy * 6 + this.cave.alchemy * 0.4 + this.attrs.wuXing * 0.05 + (this.attrs.danDao || 0) * 0.1 + rf(-0.7, 0.7))
+      let q = Math.round(accuracy * 6 + this.cave.alchemy * 0.4 + this.attrs.wuXing * 0.05 + rf(-0.7, 0.7))
       q = clamp(q, 0, 6)
       if (q === 0) { this.toast('这一炉炼成了废丹……', 'dim'); sfx.fail(); return }
       this.addPill(r.out, q, 1)
@@ -1525,7 +1528,7 @@ export const useGame = defineStore('game', {
       const enh = e.enh || 0
       if (enh >= ENH_MAX) { this.toast('已强化至上限', 'dim'); return }
       const cost = enhanceCost(e)
-      const disc = this.enhanceDiscount // 器道：强化灵石折扣
+      const disc = this.enhanceDiscount // 炼器房：强化灵石折扣
       const needLs = Math.max(1, Math.round(cost.lingshi * (1 - disc)))
       if (this.res.lingshi < needLs) { this.toast(`灵石不足（需 ${fmt(needLs)}）`, 'red'); return }
       if (this.res.lingmai < cost.lingmai) { this.toast(`灵脉石不足（需 ${cost.lingmai}）`, 'red'); return }
@@ -1533,7 +1536,7 @@ export const useGame = defineStore('game', {
       this.res.lingmai -= cost.lingmai
       e.enh = enh + 1
       refreshScore(e)
-      this.toast(`【${e.name}】强化成功 → +${e.enh}（词条效果 +${e.enh * 5}%）${disc > 0 ? ` · 器道省下 ${Math.round(disc * 100)}% 灵石` : ''}`, e.enh >= 10 ? 'gold' : 'jade')
+      this.toast(`【${e.name}】强化成功 → +${e.enh}（词条效果 +${e.enh * 5}%）${disc > 0 ? ` · 炼器房省下 ${Math.round(disc * 100)}% 灵石` : ''}`, e.enh >= 10 ? 'gold' : 'jade')
       if (e.enh === 10 || e.enh === 15) { this.flash(); this.shake(); this.burst() }
       sfx.success()
     },
@@ -3210,7 +3213,7 @@ export const useGame = defineStore('game', {
     rollEncounter() {
       const q = weighted([
         { w: 40, v: 1 }, { w: 30, v: 2 }, { w: 18, v: 3 }, { w: 9, v: 4 }, { w: 3, v: 5 },
-      ]) + Math.min(2, this.reinc.count) + Math.floor((this.attrs.tanYou || 0) / 5)
+      ]) + Math.min(2, this.reinc.count)
       const pool = ENCOUNTERS.filter(e => e.q === Math.min(5, q))
       const def = pick(pool.length ? pool : ENCOUNTERS)
       this.enc = { id: def.id, resolved: '', options: def.options.map(o => ({ label: o.label, resText: '', done: false })) }
@@ -3367,17 +3370,18 @@ export const useGame = defineStore('game', {
       if (!this.yao || typeof this.yao.dmg !== 'number') this.yao = { dayKey: 0, used: 0, dmg: 0, last: null }
       if (this.yao.last === undefined) this.yao.last = null
       // 版本迁移：灵脉 → 烛龙脉（旧深度换算等级，一次性；depth 随后归零避免重转）
-      if (!this.vein || typeof this.vein.lv !== 'number') this.vein = { lv: 1, upgUntil: 0 }
+      if (!this.vein || typeof this.vein.lv !== 'number') this.vein = { lv: 1, upgUntil: 0, digs: 0 }
       if (typeof this.vein.upgUntil !== 'number') this.vein.upgUntil = 0
+      if (typeof this.vein.digs !== 'number') this.vein.digs = 0
       if (this.mine && typeof this.mine.depth === 'number' && this.mine.depth > 0 && this.vein.lv === 1 && this.vein.upgUntil === 0) {
         this.vein.lv = Math.min(VEIN_MAX, 1 + this.mine.depth * 7)
         this.mine.depth = 0
       }
-      // 属性完整性（旧存档缺少器道/丹道/探幽）
+      // 属性完整性（道基本体 6 维 + 特殊维度）
       const attrRec = this.attrs as unknown as Record<string, number>
       const attrDefaults: Record<string, number> = {
         genGu: 5, wuXing: 5, shenShi: 5, qiYun: 5, daoXin: 5, meiLi: 5,
-        yeLi: 0, jieQi: 0, gongDe: 0, qiDao: 0, danDao: 0, tanYou: 0,
+        yeLi: 0, jieQi: 0, gongDe: 0,
       }
       for (const [k, dv] of Object.entries(attrDefaults)) {
         if (typeof attrRec[k] !== 'number' || !isFinite(attrRec[k])) attrRec[k] = dv
@@ -3513,12 +3517,16 @@ export const useGame = defineStore('game', {
 })
 
 export function keyName(k: string): string {
-  const map: Record<string, string> = { genGu: '根骨', wuXing: '悟性', shenShi: '神识', qiYun: '气运', daoXin: '道心', meiLi: '魅力', yeLi: '业力', jieQi: '天劫值', gongDe: '功德', qiDao: '器道', danDao: '丹道', tanYou: '探幽' }
+  const map: Record<string, string> = { genGu: '根骨', wuXing: '悟性', shenShi: '神识', qiYun: '气运', daoXin: '道心', meiLi: '魅力', yeLi: '业力', jieQi: '天劫值', gongDe: '功德' }
   return map[k] || k
 }
 
-// 可用于开局重掷的道基属性（展示顺序）
-export const ROLLED_ATTRS: [string, string][] = [
-  ['genGu', '根骨'], ['wuXing', '悟性'], ['shenShi', '神识'], ['qiYun', '气运'],
-  ['daoXin', '道心'], ['meiLi', '魅力'], ['qiDao', '器道'], ['danDao', '丹道'], ['tanYou', '探幽'],
+// 可用于开局重掷的道基属性（展示顺序 + 作用说明）
+export const ROLLED_ATTRS: [string, string, string][] = [
+  ['genGu', '根骨', '气血+1.5%/点 · 防御+1%/点'],
+  ['wuXing', '悟性', '修炼速度+5%/点 · 突破成功率+0.5%/点 · 炼丹品质小幅提升'],
+  ['shenShi', '神识', '攻击+1.2%/点'],
+  ['qiYun', '气运', '挂机灵石+3%/点 · 脉力暴动概率+0.5%/点 · 议价成功率+1%/点 · 捕捉精怪加成（气运÷8）'],
+  ['daoXin', '道心', '突破成功率+0.8%/点 · 道心归零时，突破失败恐堕入魔道'],
+  ['meiLi', '魅力', '坊市物价-0.8%/点 · 议价成功率+2%/点'],
 ]

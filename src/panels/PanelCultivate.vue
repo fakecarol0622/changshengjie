@@ -15,7 +15,7 @@
           </div>
           <div class="flex items-center gap-1 flex-wrap mt-1">
             <span class="text-xs dim">命格</span>
-            <span v-for="tid in g.traits" :key="tid" class="chip" :title="`${traitDef(tid).desc}（洗髓丹可重掷命格）`">
+            <span v-for="tid in g.traits" :key="tid" class="chip" :title="`【${traitDef(tid).n}】${traitModText(tid)} · ${traitDef(tid).desc}（洗髓丹可重掷命格）`">
               <b :class="traitCls(tid)">{{ traitDef(tid).n }}</b>
             </span>
           </div>
@@ -44,9 +44,9 @@
       </div>
 
       <div class="divider"></div>
-      <div class="text-xs dim mb-1">道 基 属 性</div>
+      <div class="text-xs dim mb-1">道 基 属 性 <span class="dim2">（悬停/点按查看作用）</span></div>
       <div class="grid grid-cols-3 sm:grid-cols-6 gap-y-1 text-xs">
-        <div v-for="(v, k) in attrList" :key="k">
+        <div v-for="(v, k) in attrList" :key="k" :title="ATTR_DESC[k] || ''">
           {{ k }} <b :class="k === '业力' ? 'red' : k === '功德' ? 'jade' : 'gold'">{{ v }}</b>
         </div>
       </div>
@@ -152,8 +152,9 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
-import { useGame, keyName, DAILY_TASKS } from '../stores/game'
+import { useGame, keyName, DAILY_TASKS, ROLLED_ATTRS } from '../stores/game'
 import { fmt, fmt1, fmtTime, pct } from '../core/format'
+import { modLines } from '../core/mods'
 import { ONLINE_REWARDS, PVP_TIERS, pvpRank, pvpTierIdx } from '../data/meta'
 import { STORY } from '../data/story'
 import { STAGE_MAX, stageBonus, stageEnemy, stageRewards, stageSeg } from '../data/stages'
@@ -169,6 +170,8 @@ const segInfo = computed(() => stageSeg(Math.min(STAGE_MAX, g.stage.cleared + 1)
 const nextStageN = computed(() => Math.min(STAGE_MAX, g.stage.cleared + 1))
 const nextEnemyInfo = computed(() => stageEnemy(nextStageN.value))
 function traitDef(id: string) { return TRAIT_MAP[id] || { n: '未知', r: 1, desc: '' } }
+function traitModText(id: string): string { return modLines(TRAIT_MAP[id]?.mods || {}).join(' · ') }
+const ATTR_DESC: Record<string, string> = Object.fromEntries(ROLLED_ATTRS.map(([, l, d]) => [l, d]))
 function traitCls(id: string) {
   const r = traitDef(id).r
   return r === 3 ? 'gold' : r === 2 ? 'jade' : 'dim'
@@ -199,7 +202,6 @@ const attrList = computed(() => {
   return {
     根骨: a.genGu, 悟性: a.wuXing, 神识: a.shenShi, 气运: a.qiYun,
     道心: a.daoXin, 魅力: a.meiLi, 业力: a.yeLi, 天劫值: a.jieQi, 功德: a.gongDe,
-    器道: a.qiDao, 丹道: a.danDao, 探幽: a.tanYou,
   }
 })
 

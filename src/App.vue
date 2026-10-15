@@ -30,10 +30,12 @@
 
         <div class="panel !p-3 mb-3">
           <div class="text-center text-xs dim mb-1">初 始 道 基 <span class="dim2">（可无限重掷）</span></div>
-          <div class="grid grid-cols-3 gap-y-1 text-xs">
-            <span v-for="[k, label] in ROLLED_ATTRS" :key="k" class="text-center">{{ label }} <b class="gold">{{ attrVal(k) }}</b></span>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <div v-for="[k, label, d] in ROLLED_ATTRS" :key="k" class="text-center" :title="d">
+              <div>{{ label }} <b class="gold">{{ attrVal(k) }}</b></div>
+              <div class="text-[10px] dim2 leading-tight">{{ d }}</div>
+            </div>
           </div>
-          <div class="text-xs dim2 text-center mt-1">器道省强化灵石、丹道增丹药效果、探幽提高奇遇品质</div>
           <button class="btn btn-xs w-full mt-2" @click="g.rerollAttrs()">重掷道基</button>
         </div>
 
@@ -46,9 +48,9 @@
 
         <div class="panel !p-3 mb-3">
           <div class="text-center text-xs dim mb-1">先 天 气 运（命格） <span class="dim2">共 {{ TRAIT_COUNT }} 种 · 可无限重掷</span></div>
-          <div v-for="tid in g.traits" :key="tid" class="text-xs text-center py-0.5">
-            <b :class="traitCls(tid)">【{{ traitDef(tid).n }}】</b>
-            <span class="dim">{{ traitDef(tid).desc }}</span>
+          <div v-for="tid in g.traits" :key="tid" class="text-xs text-center py-1">
+            <div><b :class="traitCls(tid)">【{{ traitDef(tid).n }}】</b> <span class="dim">{{ traitDef(tid).desc }}</span></div>
+            <div class="text-[11px] jade">{{ traitModText(tid) }}</div>
           </div>
           <button class="btn btn-xs w-full mt-2" @click="g.rerollTraits()">重掷气运（不限次）</button>
         </div>
@@ -113,6 +115,7 @@ import { fmt } from './core/format'
 import { startMusic } from './core/sfx'
 import { TRAIT_MAP, TRAITS } from './data/traits'
 import { ROLLED_ATTRS } from './stores/game'
+import { modLines } from './core/mods'
 import Particles from './components/Particles.vue'
 import ModalHost from './components/ModalHost.vue'
 import PanelGacha from './panels/PanelGacha.vue'
@@ -138,6 +141,7 @@ function attrVal(k: string): number {
 }
 
 function traitDef(id: string) { return TRAIT_MAP[id] || { n: '未知', r: 1, desc: '' } }
+function traitModText(id: string): string { return modLines(TRAIT_MAP[id]?.mods || {}).join(' · ') }
 function traitCls(id: string) {
   const r = traitDef(id).r
   return r === 3 ? 'gold' : r === 2 ? 'jade' : 'dim'

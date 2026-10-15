@@ -187,7 +187,7 @@
         </div>
           <div v-if="inInv" class="panel !p-2 mb-2">
           <div class="flex justify-between items-center gap-2 flex-wrap text-sm">
-            <span>强化 <b class="gold">+{{ itemView.enh || 0 }}</b> <span class="text-xs dim">/ +{{ ENH_MAX }} · 词条效果 +{{ (itemView.enh || 0) * 5 }}%{{ g.enhanceDiscount > 0 ? ` · 器道折扣 -${Math.round(g.enhanceDiscount * 100)}%` : '' }}</span></span>
+            <span>强化 <b class="gold">+{{ itemView.enh || 0 }}</b> <span class="text-xs dim">/ +{{ ENH_MAX }} · 词条效果 +{{ (itemView.enh || 0) * 5 }}%{{ g.enhanceDiscount > 0 ? ` · 炼器房折扣 -${Math.round(g.enhanceDiscount * 100)}%` : '' }}</span></span>
             <button class="btn btn-xs btn-gold" :disabled="(itemView.enh || 0) >= ENH_MAX" @click="g.enhanceItem(itemView.id)">
               {{ (itemView.enh || 0) >= ENH_MAX ? '已 满 级' : `强化 → +${(itemView.enh || 0) + 1}（灵石${fmt(enhCost.lingshi)} · 灵脉石${enhCost.lingmai}）` }}
             </button>
@@ -522,9 +522,9 @@
       <!-- 命格 -->
       <template v-else-if="top.kind === 'traits'">
         <div class="modal-title">先 天 气 运（命 格）</div>
-        <div v-for="tid in g.traits" :key="tid" class="py-1 text-sm text-center">
-          <b :class="traitCls(tid)">【{{ traitDef(tid).n }}】</b>
-          <span class="text-xs dim ml-1">{{ traitDef(tid).desc }}</span>
+        <div v-for="tid in g.traits" :key="tid" class="py-1.5 text-center">
+          <div class="text-sm"><b :class="traitCls(tid)">【{{ traitDef(tid).n }}】</b> <span class="text-xs dim ml-1">{{ traitDef(tid).desc }}</span></div>
+          <div class="text-xs jade mt-0.5">{{ traitModText(tid) }}</div>
         </div>
         <div class="text-xs dim2 text-center mt-1">命格先定，天道后成。转世之后重新觉醒（共 {{ TRAITS_COUNT }} 种）。</div>
         <button v-if="xisuiKey" class="btn btn-sm btn-gold w-full mt-2" @click="g.usePill(xisuiKey)">服用洗髓丹，当场重掷命格（持有 {{ g.pills[xisuiKey] }}）</button>
@@ -918,6 +918,7 @@ function storyState(sc: { id: string }) {
   return g.storyCtxReady(sc.id) ? 'ready' : 'locked'
 }
 function traitDef(id: string) { return TRAIT_MAP[id] || { n: '未知', r: 1, desc: '' } }
+function traitModText(id: string): string { return modLines(TRAIT_MAP[id]?.mods || {}).join(' · ') }
 function traitCls(id: string) {
   const r = traitDef(id).r
   return r === 3 ? 'gold' : r === 2 ? 'jade' : 'dim'

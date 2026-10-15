@@ -127,9 +127,9 @@
     <!-- 烛龙脉 -->
     <template v-else>
       <div class="panel">
-        <div class="text-xs dim mb-2">烛龙脉：一脉贯地，逐级疏通。每级提升可挖装备等级/品质与挖掘收益；后期所需灵石与时间陡增，可用「龙髓」加速（挖掘/宝箱/坊市/长阶可得）。</div>
+        <div class="text-xs dim mb-2">烛龙脉：一脉贯地，逐级疏通。每级提升可挖装备等级/品质与挖掘收益；<b class="gold">每级需先在本境挖掘一定次数</b>方可疏通，后期所需灵石与时间陡增，可用「龙髓」加速（挖掘/宝箱/坊市/长阶可得）。</div>
         <table class="tbl">
-          <thead><tr><th>等级</th><th>阶</th><th>装备等级</th><th>品质区间</th><th>出货率</th><th>灵脉石</th><th>疏通消耗</th><th>耗时</th></tr></thead>
+          <thead><tr><th>等级</th><th>阶</th><th>装备等级</th><th>品质区间</th><th>出货率</th><th>灵脉石</th><th>需挖掘</th><th>疏通消耗</th><th>耗时</th></tr></thead>
           <tbody>
             <tr v-for="row in veinRows" :key="row.lv" :class="row.lv === g.vein.lv ? 'gold' : ''">
               <td>{{ row.lv }}{{ row.lv === g.vein.lv ? '（当前）' : '' }}</td>
@@ -138,6 +138,7 @@
               <td>{{ qName(row.q.min) }} ~ {{ qName(row.q.max) }}</td>
               <td>+{{ row.luck }}%</td>
               <td>+{{ row.lingmaiP }}%</td>
+              <td>{{ row.digReq }} 次</td>
               <td>{{ row.cost ? fmt(row.cost) : '—' }}</td>
               <td>{{ row.time ? fmtTime(row.time) : '—' }}</td>
             </tr>
@@ -154,19 +155,20 @@ import { useGame } from '../stores/game'
 import { fmt, fmtTime } from '../core/format'
 import { AFFIXES, PREFIX_SEGS, QUALITIES, qName } from '../data/qualities'
 import { CORE_RES, RESONANCES, SECT_RES } from '../data/resonances'
-import { VEIN_MAX, veinEqRange, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
+import { VEIN_MAX, veinDigReq, veinEqRange, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
 import { TITLES, TITLE_RARITY } from '../data/titles'
 import type { Equip } from '../types'
 import ItemCard from '../components/ItemCard.vue'
 
 const g = useGame()
 const veinRows = computed(() => {
-  const out: { lv: number; tier: string; eq: { min: number; max: number }; q: { min: number; max: number }; luck: number; lingmaiP: number; cost: number; time: number }[] = []
+  const out: { lv: number; tier: string; eq: { min: number; max: number }; q: { min: number; max: number }; luck: number; lingmaiP: number; cost: number; time: number; digReq: number }[] = []
   for (let lv = 1; lv <= VEIN_MAX; lv++) {
     out.push({
       lv, tier: veinTier(lv), eq: veinEqRange(lv), q: veinQRange(lv),
       luck: veinLuck(lv), lingmaiP: veinLingmaiP(lv),
       cost: lv < VEIN_MAX ? veinUpCost(lv) : 0, time: lv < VEIN_MAX ? veinUpTime(lv) : 0,
+      digReq: veinDigReq(lv),
     })
   }
   return out
