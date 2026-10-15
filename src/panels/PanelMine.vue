@@ -4,14 +4,13 @@
     <div class="panel">
       <div class="panel-t">
         <span>太 初 宝 树 · {{ tierName }}（第 {{ v.lv }} 重）</span>
-        <span class="text-xs dim">根须扎在烛龙的脉上，一摇一落，皆是从它梦里取来的宝物</span>
       </div>
       <!-- 当前加成 -->
-      <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        <div class="flex justify-between"><span class="dim">摇出装备等级 <span class="dim2">（随境界）</span></span><b class="gold">Lv.{{ eqRange.min }} ~ {{ eqRange.max }}</b></div>
-        <div class="flex justify-between"><span class="dim">可摇品质区间</span><b :style="{ color: qColor(cur.q.max) }">{{ qName(cur.q.min) }} ~ {{ qName(cur.q.max) }}</b></div>
-        <div class="flex justify-between"><span class="dim">摇落出货率</span><b class="jade">+{{ cur.luck }}%</b></div>
-        <div class="flex justify-between"><span class="dim">灵露收益</span><b class="jade">+{{ cur.lingmaiP }}%</b></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        <div class="flex justify-between gap-2"><span class="dim">摇出装备等级</span><b class="gold">Lv.{{ eqRange.min }} ~ {{ eqRange.max }}</b></div>
+        <div class="flex justify-between gap-2"><span class="dim">可摇品质区间</span><b :style="{ color: qColor(cur.q.max) }">{{ qName(cur.q.min) }} ~ {{ qName(cur.q.max) }}</b></div>
+        <div class="flex justify-between gap-2"><span class="dim">摇落出货率</span><b class="jade">+{{ cur.luck }}%</b></div>
+        <div class="flex justify-between gap-2"><span class="dim">灵露收益</span><b class="jade">+{{ cur.lingmaiP }}%</b></div>
       </div>
       <div class="divider"></div>
 
@@ -35,14 +34,9 @@
 
       <!-- 可升级：下一级预览 + 培育 -->
       <template v-else>
-        <div class="text-xs mb-1"><span class="dim">下一重（第 {{ v.lv + 1 }} 重 · {{ nextTierName }}）加成预览：</span></div>
-        <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-          <div class="flex justify-between gap-1">
-            <span class="dim shrink-0">品质区间</span>
-            <span>{{ qName(cur.q.min) }}~{{ qName(cur.q.max) }} → <b class="jade">{{ qName(next.q.min) }}~{{ qName(next.q.max) }}</b></span>
-          </div>
-          <div class="flex justify-between"><span class="dim">出货率</span><span>+{{ cur.luck }}% → <b class="jade">+{{ next.luck }}%</b></span></div>
-          <div class="flex justify-between"><span class="dim">灵露收益</span><span>+{{ cur.lingmaiP }}% → <b class="jade">+{{ next.lingmaiP }}%</b></span></div>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs dim">下一重（第 {{ v.lv + 1 }} 重 · {{ nextTierName }}）加成预览</span>
+          <button class="btn btn-xs shrink-0" @click="openUpPrev()">预览详情</button>
         </div>
         <div class="flex justify-between items-center text-xs mt-2">
           <span>本重摇落进度 <b :class="digMet ? 'jade' : 'gold'">{{ Math.min(digs, digReq) }} / {{ digReq }}</b><span class="dim2">（培育前需先在本重摇落）</span></span>
@@ -57,7 +51,7 @@
         </button>
       </template>
       <div class="text-xs jade mt-2">
-        {{ v.lv >= 56 ? `摇落星级保底：${g.veinStarFloor}星` : '登高目标：56重保底2星 · 61重3星 · 66重4星' }}
+        {{ v.lv >= 75 ? `摇落星级保底：${g.veinStarFloor}星` : '登高目标：75重保底2星 · 81重3星 · 88重4星' }}
         <button class="info-dot" type="button" aria-label="宝树说明" @click="g.pushModal('text', { title: '太初宝树', body: VEIN_INFO })">!</button>
       </div>
     </div>
@@ -65,8 +59,8 @@
     <!-- 摇落操作区 -->
     <div class="panel">
       <div class="panel-t">
-        <span>摇 落 宝 树</span>
-        <span class="text-xs dim">出货率 · 命格等 {{ sgn(Math.round(g.derived.stats.dropLuck)) }}% · 宝树 {{ sgn(cur.luck) }}%{{ tide ? ` · 宝树潮 +${TIDE_LUCK}%` : '' }}<button class="info-dot" type="button" aria-label="出货率说明" @click="g.pushModal('text', { title: '出货率', body: LUCK_INFO })">!</button></span>
+        <span class="shrink-0">摇 落 宝 树</span>
+        <span class="text-xs dim text-right">出货率合计 {{ sgn(luckTotal) }}%<button class="info-dot" type="button" aria-label="出货率说明" @click="g.pushModal('text', { title: '出货率', body: LUCK_INFO })">!</button></span>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <button
@@ -142,11 +136,11 @@ import ItemCard from '../components/ItemCard.vue'
 const g = useGame()
 function wornIn(id: number): 'main' | 'yang' | 'yin' | null { return g.wornBodyOf(id) }
 // 「宝树」说明：长文案收进 ⓘ
-const VEIN_INFO = '· 龙髓获取：摇落掉落 · 每日活跃宝箱 · 坊市奇货 · 问道长阶每 10 阶首通 · 脉力暴动。\n· 培育中可用龙髓加速：缩短剩余时间 20%（单次至少缩 10 分钟）。\n· 登高保底：56 重起摇落附星保底（2星→3星→4星），越高越难，越值得。\n· 世人皆唤它太初宝树；守碑人却知道，树根扎在山下那条沉眠的脉上——每一次摇落，都是在它梦里取宝。'
+const VEIN_INFO = '· 龙髓获取：摇落掉落 · 每日活跃宝箱 · 坊市奇货 · 问道长阶每 10 阶首通 · 脉力暴动。\n· 培育中可用龙髓加速：缩短剩余时间 20%（单次至少缩 10 分钟）。\n· 登高保底：75 重起摇落附星保底（2星→3星→4星），越高越难，越值得。\n· 世人皆唤它太初宝树；守碑人却知道，树根扎在山下那条沉眠的脉上——每一次摇落，都是在它梦里取宝。'
 // 「灵露」说明：长文案收进 ⓘ
 const DIG_INFO = '· 每摇落一次耗灵露（越高处耗得越多），摇落本身不再产出灵露。\n· 灵露来源：挂机吐纳 · 副本扫荡 · 活跃宝箱 · 坊市奇货。\n· 主要去处：宝树培育 · 装备强化 · 分身凝练。'
 // 「出货率」说明：长文案收进 ⓘ
-const LUCK_INFO = `出货率 = 摇落品质的上浮系数，不影响掉落数量（每次摇落必出一件装备）。\n· 品质：在宝树品质区间内，出货率越高越容易掷出区间内的高品质（最高档权重最多 ×(1+出货率/100)）。\n· 等级：出货率越高，装备等级越靠近你境界对应区间的上限。\n· 来源：宝树重数（每重+0.6%）、天象「宝树潮·涌」（+${TIDE_LUCK}%，期间暴动概率×${TIDE_SURGE_MULT}）、命格/法宝/灵兽/共鸣等。\n· 只作用于宝树摇落，副本、抽卡等各有独立概率。`
+const LUCK_INFO = `出货率 = 摇落品质的上浮系数，不影响掉落数量（每次摇落必出一件装备）。\n· 品质：区间恒宽 5 档、每 6 重整体上滑 1 档；重数越高分布越向高品倾斜（后期高品概率反超低品），出货率进一步加大倾斜。\n· 等级：出货率越高，装备等级越靠近你境界对应区间的上限。\n· 来源：宝树重数（每重+2%）、天象「宝树潮·涌」（+${TIDE_LUCK}%，期间暴动概率×${TIDE_SURGE_MULT}）、命格/法宝/灵兽/共鸣等。\n· 只作用于宝树摇落，副本、抽卡等各有独立概率。`
 const tide = computed(() => g.activity?.id === 'tide')
 const v = computed(() => g.vein)
 const tierName = computed(() => veinTier(v.value.lv))
@@ -186,6 +180,28 @@ const remainStr = computed(() => (uping.value ? fmtTime(Math.max(0, v.value.upgU
 const accelerateMs = computed(() => veinAcceleration(Math.max(0, v.value.upgUntil - now.value)))
 
 const qdist = computed(() => veinQualityDist(v.value.lv, g.derived.stats.dropLuck + veinLuck(v.value.lv) + (tide.value ? TIDE_LUCK : 0)))
+// 出货率合计（与实际摇落口径一致：命格等 + 宝树重数 + 宝树潮）
+const luckTotal = computed(() => Math.round((g.derived.stats.dropLuck + cur.value.luck + (tide.value ? TIDE_LUCK : 0)) * 10) / 10)
+// 下一重品质概率（培育预览：与培育结果一致的口径）
+const qdistNext = computed(() => {
+  const nl = Math.min(VEIN_MAX, v.value.lv + 1)
+  return veinQualityDist(nl, g.derived.stats.dropLuck + veinLuck(nl) + (tide.value ? TIDE_LUCK : 0))
+})
+// 培育预览弹窗：列出全部品质，对比当前 → 下一重
+function openUpPrev() {
+  const map = new Map<number, { q: number; cur: number; next: number }>()
+  for (const d of qdist.value) map.set(d.q, { q: d.q, cur: d.pct, next: 0 })
+  for (const d of qdistNext.value) {
+    const r = map.get(d.q) || { q: d.q, cur: 0, next: 0 }
+    r.next = d.pct
+    map.set(d.q, r)
+  }
+  const rows = [...map.values()].sort((a, b) => a.q - b.q).map(r => ({ ...r, d: Math.round((r.next - r.cur) * 10) / 10 }))
+  g.pushModal('veinprev', {
+    lv: v.value.lv, tier: tierName.value, nextTier: nextTierName.value,
+    cur: cur.value, next: next.value, rows,
+  })
+}
 function sgn(n: number): string { return (n >= 0 ? '+' : '') + n }
 const surgePct = computed(() => {
   const base = 3 * (tide.value ? 2 : 1) * (1 + g.attrs.qiYun * 0.005)

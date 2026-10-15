@@ -67,6 +67,6 @@ export const TITLES: TitleDef[] = [
   { id: 'sanqing', n: '一气化三清', desc: '本源分化，阴阳双分身齐备', r: 4, ok: c => c.clones >= 2 },
   { id: 'yaowang', n: '妖王克星', desc: '妖王殿伤害榜登顶（当日）', r: 4, ok: c => c.yaoRank === 1 },
   { id: 'baiyao', n: '力压群妖', desc: '妖王殿伤害榜进入前三（当日）', r: 3, ok: c => c.yaoRank >= 1 && c.yaoRank <= 3 },
-  { id: 'shumai', n: '育树师', desc: '太初宝树培育至 18 重（青枝）', r: 3, ok: c => c.veinLv >= 18 },
-  { id: 'zulong', n: '通天之主', desc: '太初宝树培育至 54 重（通天）', r: 5, ok: c => c.veinLv >= 54 },
+  { id: 'shumai', n: '育树师', desc: '太初宝树培育至 14 重（幼苗）', r: 3, ok: c => c.veinLv >= 14 },
+  { id: 'zulong', n: '通天之主', desc: '太初宝树培育至 79 重（通天）', r: 5, ok: c => c.veinLv >= 79 },
 ]

@@ -284,17 +284,17 @@ try {
     assert.equal(res.check({ distinctTop: top.length - 1 }), false)
   })
   await test('后期龙脉星级保底在生成属性前生效', () => {
-    fresh(); assert.equal(R.veinStarFloor(55), 1); assert.equal(R.veinStarFloor(56), 2)
-    assert.equal(R.veinStarFloor(61), 3); assert.equal(R.veinStarFloor(66), 4)
-    g.vein.lv = 66; g.res.lingmai = 10000
+    fresh(); assert.equal(R.veinStarFloor(74), 1); assert.equal(R.veinStarFloor(75), 2)
+    assert.equal(R.veinStarFloor(81), 3); assert.equal(R.veinStarFloor(88), 4)
+    g.vein.lv = 88; g.res.lingmai = 10000
     for (const item of g.mineAt(10, true)) { assert.ok(item.stars >= 4); assert.equal(item.score, Q.scoreEquip(item)) }
     assert.equal(R.veinAcceleration(3600000), 720000)
     assert.equal(R.veinAcceleration(300000), 300000)
   })
   await test('首通灵石与参考挂机产出同阶，龙脉时间不再增长到数天', () => {
     assert.ok(S.stageRewards(90).find(x => x.id === 'lingshi').n < 10000000)
-    assert.ok(R.veinUpTime(65) <= 12 * 3600000)
-    assert.ok(R.veinUpCost(65) < 100000000)
+    assert.ok(R.veinUpTime(87) <= 12 * 3600000)
+    assert.ok(R.veinUpCost(87) < 600000000)
   })
   await test('灵石福利随境界成长，新手奖励可支付基础建设', async () => {
     const L = await server.ssrLoadModule('/src/data/lingshi.ts')

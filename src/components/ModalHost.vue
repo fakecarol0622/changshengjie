@@ -328,6 +328,64 @@
         <button class="btn w-full mt-3" @click="g.closeModal()">关 闭</button>
       </template>
 
+      <!-- 太初宝树 · 培育预览 -->
+      <template v-else-if="top.kind === 'veinprev' && veinPrevView">
+        <div class="modal-title gold">太 初 宝 树 · 培育预览</div>
+        <div class="text-center text-xs dim mb-2">第 {{ veinPrevView.lv }} 重（{{ veinPrevView.tier }}） → 第 {{ veinPrevView.lv + 1 }} 重（{{ veinPrevView.nextTier }}）</div>
+        <div class="panel !p-2 mb-2 text-xs flex flex-col gap-1">
+          <div class="flex justify-between gap-2"><span class="dim">可摇品质区间</span><span>{{ qName(veinPrevView.cur.q.min) }} ~ {{ qName(veinPrevView.cur.q.max) }} → <b class="jade">{{ qName(veinPrevView.next.q.min) }} ~ {{ qName(veinPrevView.next.q.max) }}</b></span></div>
+          <div class="flex justify-between gap-2"><span class="dim">摇落出货率</span><span>+{{ veinPrevView.cur.luck }}% → <b class="jade">+{{ veinPrevView.next.luck }}%</b></span></div>
+          <div class="flex justify-between gap-2"><span class="dim">灵露收益</span><span>+{{ veinPrevView.cur.lingmaiP }}% → <b class="jade">+{{ veinPrevView.next.lingmaiP }}%</b></span></div>
+        </div>
+        <div class="flex justify-between text-[11px] dim2 px-1 mb-1"><span>品质</span><span>当前 → 下一重</span></div>
+        <div class="flex flex-col gap-0.5 mb-2" style="max-height: 32vh; overflow-y: auto">
+          <div v-for="row in veinPrevView.rows" :key="row.q" class="flex justify-between items-center text-xs px-1 py-0.5">
+            <span :style="{ color: qColor(row.q) }">{{ qName(row.q) }}</span>
+            <span>{{ row.cur }}% → <b :style="{ color: qColor(row.q) }">{{ row.next }}%</b><span class="ml-1 text-[10px]" :class="row.d > 0 ? 'jade' : row.d < 0 ? 'red' : 'dim2'">{{ row.d === 0 ? '±0' : '(' + (row.d > 0 ? '+' : '') + row.d + ')' }}</span></span>
+          </div>
+        </div>
+        <button class="btn w-full" @click="g.closeModal()">关 闭</button>
+      </template>
+
+      <!-- 境界预览 -->
+      <template v-else-if="top.kind === 'realmprev' && realmPrevView">
+        <div class="modal-title gold">境 界 预 览</div>
+        <div class="text-center text-xs dim mb-2">{{ realmPrevView.curName }} → <b class="gold">{{ realmPrevView.nextName }}</b></div>
+        <div class="flex flex-col gap-1 text-xs mb-2">
+          <div v-for="row in realmPrevView.rows" :key="row.k" class="flex justify-between gap-2">
+            <span class="dim">{{ row.k }}</span>
+            <span>{{ row.cur }} → <b class="jade">{{ row.next }}</b><span class="ml-1 text-[10px]" :class="row.d > 0 ? 'jade' : 'dim2'">{{ row.d > 0 ? '+' + row.d + '%' : '±0' }}</span></span>
+          </div>
+        </div>
+        <div class="text-xs" :class="realmPrevView.majorUp ? 'gold' : 'dim2'">{{ realmPrevView.note }}</div>
+        <div class="text-xs dim2 mt-1">数值为基础属性口径（未含命格/装备/共鸣等加成）。</div>
+        <button class="btn w-full mt-2" @click="g.closeModal()">关 闭</button>
+      </template>
+
+      <!-- 法宝共鸣一览 -->
+      <template v-else-if="top.kind === 'combos' && comboRows">
+        <div class="modal-title gold">法 宝 共 鸣</div>
+        <div class="text-center text-xs dim mb-2">两件法宝同时出战时生效 · 已生效 {{ comboRows.filter(r => r.active).length }} / {{ comboRows.length }} 条</div>
+        <div class="flex flex-col gap-1.5" style="max-height: 52vh; overflow-y: auto">
+          <div v-for="r in comboRows" :key="r.n" class="panel !p-2">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-bold text-sm" :class="r.active ? 'gold' : ''">{{ r.n }}</span>
+              <span v-if="r.active" class="chip chip-gold text-[10px]">已生效</span>
+              <span class="text-xs jade ml-auto">{{ r.desc }}</span>
+            </div>
+            <div class="text-xs mt-1 flex items-center gap-1 flex-wrap">
+              <span class="dim">组成</span>
+              <template v-for="(p, i) in r.parts" :key="p.n">
+                <span v-if="i" class="dim2">+</span>
+                <span :class="p.on ? 'gold' : p.owned ? '' : 'dim2'">{{ p.n }}</span>
+                <span class="text-[10px]" :class="p.on ? 'jade' : 'dim2'">{{ p.on ? '（出战）' : p.owned ? '（已拥有）' : '（未拥有）' }}</span>
+              </template>
+            </div>
+          </div>
+        </div>
+        <button class="btn w-full mt-3" @click="g.closeModal()">关 闭</button>
+      </template>
+
       <!-- 切磋邀约 -->
       <template v-else-if="top.kind === 'npcduel' && duelView">
         <div class="modal-title">切 磋 之 邀</div>
@@ -641,7 +699,7 @@
         </template>
         <template v-else>
           <div class="text-center text-xs gold mb-1">✦ 收 获 · 共 {{ g.mineBusy.eqs.length }} 件 ✦</div>
-          <div class="text-center text-xs dim2 mb-2">已耗灵露 ×{{ g.mineBusy.cost }} · 现存 {{ fmt(g.res.lingmai) }}（点卡片可详阅）</div>
+          <div class="text-center text-xs dim2 mb-2">已耗灵露 ×{{ g.mineBusy.cost }} · 现存 {{ fmt(g.res.lingmai) }}</div>
           <div class="flex flex-col gap-2 max-h-72 overflow-y-auto">
             <div v-for="it in mineSorted" :key="it.id" class="itemcard cursor-pointer" @click="g.pushModal('item', it)">
               <div class="flex justify-between items-center gap-2">
@@ -734,7 +792,7 @@ import { MONTH_DAYS, PAY_PACKS, monthReward, newbieReward, realmGift, rewardBrie
 import { REDEEM_CODES } from '../data/codes'
 import { TRAITS, TRAIT_MAP } from '../data/traits'
 import { setAudio, setMusic } from '../core/sfx'
-import { BEAST_MAP, BEAST_STAGES, BEAST_STAGE_SKILLS } from '../data/items'
+import { BEAST_MAP, BEAST_STAGES, BEAST_STAGE_SKILLS, TREASURE_COMBOS, TREASURE_MAP } from '../data/items'
 import { FAM_MAP, FAM_RARITY, FAMILIARS, famScale } from '../data/familiars'
 import { GIFTS, npcLikes } from '../data/gifts'
 import { npcPower, npcRealm } from '../core/npc'
@@ -851,6 +909,50 @@ const storyNpcView = computed(() => {
   const t = top.value
   if (t?.kind !== 'storynpc') return null
   return g.storyNpcList.find(s => s.id === String(t.data)) || null
+})
+
+// —— 太初宝树 · 培育预览 ——
+interface VeinPrevData {
+  lv: number
+  tier: string
+  nextTier: string
+  cur: { q: { min: number; max: number }; luck: number; lingmaiP: number }
+  next: { q: { min: number; max: number }; luck: number; lingmaiP: number }
+  rows: { q: number; cur: number; next: number; d: number }[]
+}
+const veinPrevView = computed<VeinPrevData | null>(() => {
+  const t = top.value
+  if (t?.kind !== 'veinprev') return null
+  return (t.data as VeinPrevData) || null
+})
+
+// —— 境界预览 ——
+interface RealmPrevData {
+  curName: string
+  nextName: string
+  majorUp: boolean
+  note: string
+  rows: { k: string; cur: string; next: string; d: number }[]
+}
+const realmPrevView = computed<RealmPrevData | null>(() => {
+  const t = top.value
+  if (t?.kind !== 'realmprev') return null
+  return (t.data as RealmPrevData) || null
+})
+
+// —— 法宝共鸣一览 ——
+const comboRows = computed(() => {
+  const t = top.value
+  if (t?.kind !== 'combos') return null
+  return TREASURE_COMBOS.map(c => {
+    const parts = c.ids.map(id => {
+      const n = TREASURE_MAP[id]?.n || id
+      const owned = g.treasures.some(x => x.name === n)
+      const on = g.treasureEquipped.some(tid => g.treasures.find(x => x.id === tid)?.name === n)
+      return { n, owned, on }
+    })
+    return { n: c.n, desc: c.desc, active: parts.every(p => p.on), parts }
+  })
 })
 
 // —— 切磋邀约 ——

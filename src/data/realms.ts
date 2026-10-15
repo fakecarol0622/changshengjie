@@ -30,14 +30,17 @@ export function cultReq(lv: number): number {
   const seg = major <= 2 ? 1 : major <= 5 ? 1.28 : major <= 8 ? 1.58 : 1.9
   return Math.round(150 * Math.pow(1.0385, lv) * seg)
 }
-export function baseHp(lv: number): number {
-  return Math.round(120 * Math.pow(1.04225, lv))
+export function baseHp(lv: number, raw = false): number {
+  const v = 120 * Math.pow(1.04225, lv)
+  return raw ? v : Math.round(v)
 }
-export function baseAtk(lv: number): number {
-  return Math.round(12 * Math.pow(1.03936, lv))
+export function baseAtk(lv: number, raw = false): number {
+  const v = 12 * Math.pow(1.03936, lv)
+  return raw ? v : Math.round(v)
 }
-export function baseDef(lv: number): number {
-  return Math.round(8 * Math.pow(1.03936, lv))
+export function baseDef(lv: number, raw = false): number {
+  const v = 8 * Math.pow(1.03936, lv)
+  return raw ? v : Math.round(v)
 }
 export function cultRate(lv: number, wuXing: number, mult: number): number {
   return 0.45 * Math.pow(1.02154, lv) * (1 + wuXing / 20) * mult
@@ -52,45 +55,46 @@ export function idleLingmai(lv: number, mult: number): number {
 // —— 太初宝树：根扎龙脉，摇落得宝（时间+灵石培育，龙髓可加速）——
 export const VEIN_NAME = '太初宝树'
 export const VEIN_FLAVOR = '根须扎在烛龙的脉上，一摇一落，皆是从它梦里取来的宝物'
-export const VEIN_MAX = 66
+export const VEIN_MAX = 88
 export const VEIN_TIERS: { from: number; n: string }[] = [
   { from: 1, n: '嫩芽' },
-  { from: 10, n: '幼苗' },
-  { from: 18, n: '青枝' },
-  { from: 26, n: '华盖' },
-  { from: 34, n: '参天' },
-  { from: 44, n: '擎天' },
-  { from: 54, n: '通天' },
+  { from: 14, n: '幼苗' },
+  { from: 27, n: '青枝' },
+  { from: 40, n: '华盖' },
+  { from: 53, n: '参天' },
+  { from: 66, n: '擎天' },
+  { from: 79, n: '通天' },
 ]
 export function veinTier(lv: number): string {
   let n = VEIN_TIERS[0].n
   for (const t of VEIN_TIERS) if (lv >= t.from) n = t.n
   return n
 }
-// 当前等级可摇出的品质区间（随宝树重数）
+// 当前等级可摇出的品质区间（恒宽 5 档，每 6 重整体上滑 1 档：1-5 → 12-16）
 export function veinQRange(lv: number): { min: number; max: number } {
-  const qmax = Math.min(16, 2 + Math.floor(lv / 4))
-  const qmin = Math.max(1, qmax - 5 + Math.floor(lv / 15))
-  return { min: Math.min(qmin, qmax), max: qmax }
+  const qmin = Math.min(12, 1 + Math.floor(Math.max(0, lv - 1) / 6))
+  return { min: qmin, max: qmin + 4 }
 }
-// 每重加成：摇落出货率 +0.6%/重
-export function veinLuck(lv: number): number { return Math.round(lv * 0.6 * 10) / 10 }
-// 每重加成：灵露收益 +1.5%/重
-export function veinLingmaiP(lv: number): number { return Math.round(lv * 1.5 * 10) / 10 }
+// 每重加成：摇落出货率 +2%/重
+export function veinLuck(lv: number): number { return Math.round(lv * 2 * 10) / 10 }
+// 每重加成：灵露收益 +2%/重
+export function veinLingmaiP(lv: number): number { return Math.round(lv * 2 * 10) / 10 }
 // 单次摇落消耗灵露（随宝树加深，是灵露的主要去处，摇落本身不再产出灵露）
 export function veinDigCost(lv: number): number { return Math.round(1 + lv * lv / 25 + lv * 0.4) }
 // 培育消耗与耗时平滑增长，单次等待最多12小时。
 export function veinUpCost(lv: number): number { return Math.round(1300 * Math.pow(1.16, lv - 1)) }
 export function veinUpTime(lv: number): number { return Math.round(Math.min(12 * 3600000, 25000 * Math.pow(1.12, lv))) }
 // 满品质后的成长目标：摇落星级保底，数值在装备生成前应用。
-export function veinStarFloor(lv: number): number { return lv >= 66 ? 4 : lv >= 61 ? 3 : lv >= 56 ? 2 : 1 }
+export function veinStarFloor(lv: number): number { return lv >= 88 ? 4 : lv >= 81 ? 3 : lv >= 75 ? 2 : 1 }
 export function veinAcceleration(remainingMs: number): number { return Math.min(remainingMs, Math.max(600000, Math.ceil(remainingMs * 0.2))) }
 // 每重培育前需先在本重完成的摇落次数（先摇落后培育）
 export function veinDigReq(lv: number): number { return 5 + Math.ceil(lv * 0.8) }
 
-// 品质概率衰减系数：区间内偏向低品（底部常见、顶部稀有）；宝树越深衰减越弱
+// 品质倾斜系数：档位权重 w=f^i（i 从最低档起）——f<1 低品常见，f≈1 各档趋平，f>1 高品为王。
+// 随重数前快后慢地从 0.26 升到 ~2.3：前期每重低品大幅下降（每重约 -3~5%），后期高品概率反超。
 export function veinFalloff(lv: number): number {
-  return Math.min(0.9, 0.52 + lv * 0.004)
+  const t = Math.min(1, Math.max(0, lv) / VEIN_MAX)
+  return Math.exp(-1.35 + 2.2 * Math.pow(t, 0.34))
 }
 
 // —— 装备等级：与主角等级同步（第19批：1..460 标尺，随境界对应等级）——
@@ -106,15 +110,15 @@ export function mineEquipLevel(playerLv: number, luck = 0): number {
   return Math.max(1, Math.min(EQ_LV_MAX, Math.round(r.min + t * (r.max - r.min))))
 }
 
-// 当前宝树重数的各品质概率（用于界面展示，与实际掉落一致，出货率参与计算）
+// 当前宝树重数的各品质概率（用于界面展示，与实际掉落同口径）
+// 权重 = f^i（i 为从最低档起的档位序）；出货率进一步提升倾斜度（f × e^(luck×0.0015)）。
 export function veinQualityDist(lv: number, luck = 0): { q: number; pct: number }[] {
   const r = veinQRange(lv)
-  const falloff = veinFalloff(lv)
+  const f = veinFalloff(lv) * Math.exp(luck * 0.0015)
   const arr: { q: number; w: number }[] = []
   let sum = 0
   for (let q = r.min; q <= r.max; q++) {
-    let w = Math.pow(falloff, q - r.min)
-    w *= 1 + (luck / 100) * ((q - r.min) / Math.max(1, r.max - r.min))
+    const w = Math.pow(f, q - r.min)
     arr.push({ q, w })
     sum += w
   }

@@ -48,6 +48,7 @@
         <div>
           突破率 <b class="gold">{{ Math.round(g.breakChanceBase * 100) }}%</b> · 修为储存 {{ fmt(g.cultivation) }} / {{ fmt(g.cultivationCap) }}
           <button class="info-dot" type="button" aria-label="突破与修为说明" @click="g.pushModal('text', { title: '突破与修为', body: BREAK_INFO })">!</button>
+          <button class="btn btn-xs ml-1" :disabled="g.lv >= LV_MAX" @click="openRealmPrev()">境界预览</button>
         </div>
         <div>打坐奖励：<b class="gold">{{ fmt(g.meditateReward.ls) }}灵石 · {{ g.meditateReward.xy }}仙玉</b>，另得{{ g.meditateReward.lm }}灵露，每日{{ MEDITATE_MAX }}次。</div>
       </div>
@@ -173,7 +174,7 @@
 import { computed, onUnmounted, ref } from 'vue'
 import GlyphIcon from '../components/GlyphIcon.vue'
 import { useGame, keyName, DAILY_TASKS, DAILY_CHEST_POINTS, MEDITATE_MAX, ROLLED_ATTRS } from '../stores/game'
-import { LV_MAX } from '../data/realms'
+import { LV_MAX, baseAtk, baseDef, baseHp, cultRate, idleLingmai, idleLingshi, realmName, veinLingmaiP } from '../data/realms'
 import { fmt, fmt1, fmtTime, pct } from '../core/format'
 import { modLines } from '../core/mods'
 import { ONLINE_REWARDS, PVP_TIERS, pvpRank, pvpTierIdx } from '../data/meta'
@@ -195,6 +196,41 @@ const ATTR_DESC: Record<string, string> = Object.fromEntries(ROLLED_ATTRS.map(([
 function traitCls(id: string) {
   const r = traitDef(id).r
   return r === 3 ? 'gold' : r === 2 ? 'jade' : 'dim'
+}
+
+// —— 境界预览：下一阶基础属性对比（大境界/渡劫单独提示） ——
+function lvNameAt(lv: number): string {
+  const l = Math.max(0, Math.min(LV_MAX, lv))
+  return realmName(Math.min(10, Math.floor(l / 40)), Math.floor((l % 40) / 10), l % 10)
+}
+// 小数值保留两位小数（大数值走万/亿缩写）
+function f2(n: number): string { return n >= 1000 ? fmt(n) : (Math.round(n * 100) / 100).toString() }
+function openRealmPrev() {
+  const lv = g.lv
+  const nl = Math.min(LV_MAX, lv + 1)
+  const majorUp = lv % 40 === 39 && lv < LV_MAX
+  const fanToQi = majorUp && Math.floor(lv / 40) === 0
+  const wx = g.attrs.wuXing
+  const qy = g.attrs.qiYun
+  const cmult = g.derived.cultMult
+  const lmult = 1 + g.cave.level * 0.1
+  const mmult = (1 + g.cave.level * 0.08) * (1 + veinLingmaiP(g.vein.lv) / 100)
+  const rows = ([
+    ['气血上限', baseHp(lv, true), baseHp(nl, true)],
+    ['攻击', baseAtk(lv, true), baseAtk(nl, true)],
+    ['防御', baseDef(lv, true), baseDef(nl, true)],
+    ['修炼速度/秒', cultRate(lv, wx, cmult), cultRate(nl, wx, cmult)],
+    ['挂机灵石/秒', idleLingshi(lv, qy, lmult), idleLingshi(nl, qy, lmult)],
+    ['挂机灵露/秒', idleLingmai(lv, mmult), idleLingmai(nl, mmult)],
+  ] as [string, number, number][]).map(([k, a, b]) => ({
+    k, cur: f2(a), next: f2(b), d: a > 0 ? Math.round((b / a - 1) * 1000) / 10 : 0,
+  }))
+  const note = lv >= LV_MAX
+    ? '境界已至圆满（仙人圆满·十阶），静候飞升。'
+    : majorUp
+      ? (fanToQi ? '★ 大境界突破：一步踏入【炼气】，自此凡俗两隔。' : '★ 大境界突破：直面天劫雷渊，需渡劫一搏。')
+      : lv % 10 === 9 ? '小境界提升：迈入下一境界段位。' : '小阶提升：日积寸功，稳中有进。'
+  g.pushModal('realmprev', { curName: g.realmText, nextName: lvNameAt(nl), majorUp, rows, note })
 }
 
 // 「突破与修为」说明：长文案收进 ⓘ，点击查看

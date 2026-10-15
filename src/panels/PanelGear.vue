@@ -15,20 +15,30 @@
           <button v-if="g.clones.yangOpen" class="btn btn-xs" :class="g.clones.active === 'yang' ? 'btn-gold' : ''" @click="g.setActiveBody('yang')">
             阳神 · {{ fmt(g.bodyPower('yang')) }}
           </button>
-          <button v-else class="btn btn-xs" :class="g.major >= 5 ? 'btn-gold' : ''" :disabled="g.major < 5" title="化神期解锁 · 消耗 仙玉×300 + 灵露×10000" @click="g.openClone('yang')">
-            凝练阳神（仙玉300·灵露10000）
-          </button>
+          <template v-else>
+            <div class="flex items-center w-full">
+              <button class="btn btn-xs flex-1" :class="g.major >= 5 ? 'btn-gold' : ''" :disabled="g.major < 5" title="化神期解锁 · 消耗 仙玉×300 + 灵露×10000" @click="g.openClone('yang')">
+                凝练阳神（仙玉300·灵露10000）
+              </button>
+              <button v-if="g.major < 5" class="info-dot" type="button" aria-label="凝练阳神解锁条件" @click="g.pushModal('text', { title: '凝 练 阳 神', body: YANG_UNLOCK })">!</button>
+            </div>
+          </template>
           <button v-if="g.clones.yinOpen" class="btn btn-xs" :class="g.clones.active === 'yin' ? 'btn-gold' : ''" @click="g.setActiveBody('yin')">
             阴身 · {{ fmt(g.bodyPower('yin')) }}
           </button>
-          <button v-else class="btn btn-xs" :class="g.major >= 5 && g.clones.yangOpen ? 'btn-gold' : ''" :disabled="g.major < 5 || !g.clones.yangOpen" :title="g.major < 5 ? '化神期解锁' : !g.clones.yangOpen ? '需先凝练阳神' : '消耗 仙玉×600 + 灵露×25000'" @click="g.openClone('yin')">
-            凝练阴身（仙玉600·灵露25000）
-          </button>
+          <template v-else>
+            <div class="flex items-center w-full">
+              <button class="btn btn-xs flex-1" :class="g.major >= 5 && g.clones.yangOpen ? 'btn-gold' : ''" :disabled="g.major < 5 || !g.clones.yangOpen" :title="g.major < 5 ? '化神期解锁' : !g.clones.yangOpen ? '需先凝练阳神' : '消耗 仙玉×600 + 灵露×25000'" @click="g.openClone('yin')">
+                凝练阴身（仙玉600·灵露25000）
+              </button>
+              <button v-if="g.major < 5 || !g.clones.yangOpen" class="info-dot" type="button" aria-label="凝练阴身解锁条件" @click="g.pushModal('text', { title: '凝 练 阴 身', body: yinUnlockBody() })">!</button>
+            </div>
+          </template>
         </div>
         <div class="text-xs dim2 mt-1">分身拥有独立装备栏与共鸣；切换后长阶、论道台、副本等战斗自动沿用其配装，道基/灵兽/精怪/法宝/丹药共享。</div>
       </div>
       <div class="panel">
-        <div class="panel-t">装 备 栏（{{ g.activeBodyName }}） <span class="text-xs dim">点击槽位筛选 · 战力 {{ fmt(g.derived.power) }} · 共鸣 {{ g.derived.active.length }} 条</span></div>
+        <div class="panel-t">装 备 栏（{{ g.activeBodyName }}） <span class="text-xs dim shrink-0">战力 {{ fmt(g.derived.power) }}</span></div>
         <div class="slot6">
           <div
             v-for="s in SLOTS" :key="s"
@@ -53,26 +63,24 @@
         <div class="mt-1 flex items-center gap-1 flex-wrap text-xs">
           <span class="dim">共鸣</span>
           <span v-for="r in activeResDefs" :key="r.id" class="chip chip-gold" :title="r.req + ' → ' + r.desc">{{ r.name }}</span>
-          <span v-if="!activeResDefs.length" class="dim2">无（点击下方装备查看铭纹；共鸣详情见修炼页）</span>
+          <span v-if="!activeResDefs.length" class="dim2">无</span>
         </div>
       </div>
       <div class="panel">
-        <div class="panel-t">
-          <span>背包 {{ g.invCount }} / 240</span>
-          <span class="flex gap-1 flex-wrap items-center">
-            <button class="btn btn-xs" @click="filterSlot = null">全部</button>
-            <button class="btn btn-xs" @click="sortDesc = !sortDesc">评分{{ sortDesc ? '降序' : '升序' }}</button>
-            <button class="btn btn-xs btn-gold" title="逐个部位按面板战力推荐；共鸣搭配与实战克制请自行调整" @click="g.autoEquipBest()">战力推荐</button>
-            <select v-model.number="massQ" class="btn btn-xs" style="padding: 2px 6px">
-              <option v-for="q in 10" :key="q" :value="q">≤{{ q }} 品</option>
-            </select>
-            <button
-              class="btn btn-xs" :class="massArmed ? 'btn-red' : ''"
-              :disabled="junkCount === 0"
-              :title="`分解背包中未穿戴且品质 ≤${massQ} 的装备，回收20%评分灵石，每件至少5`"
-              @click="doMass"
-            >{{ massArmed ? `确认分解 ${junkCount} 件` : `分解（${junkCount}）` }}</button>
-          </span>
+        <div class="panel-t">背 包 {{ g.invCount }} / 240</div>
+        <div class="flex gap-1 flex-wrap items-center mb-2">
+          <button class="btn btn-xs" @click="filterSlot = null">全部</button>
+          <button class="btn btn-xs" @click="sortDesc = !sortDesc">评分{{ sortDesc ? '降序' : '升序' }}</button>
+          <button class="btn btn-xs btn-gold" title="逐个部位按面板战力推荐；共鸣搭配与实战克制请自行调整" @click="g.autoEquipBest()">战力推荐</button>
+          <select v-model.number="massQ" class="btn btn-xs" style="padding: 2px 6px">
+            <option v-for="q in 10" :key="q" :value="q">≤{{ q }} 品</option>
+          </select>
+          <button
+            class="btn btn-xs" :class="massArmed ? 'btn-red' : ''"
+            :disabled="junkCount === 0"
+            :title="`分解背包中未穿戴且品质 ≤${massQ} 的装备，回收20%评分灵石，每件至少5`"
+            @click="doMass"
+          >{{ massArmed ? `确认分解 ${junkCount} 件` : `分解（${junkCount}）` }}</button>
         </div>
         <div class="flex flex-col gap-2 max-h-[540px] overflow-y-auto pr-1">
           <div v-if="!invFiltered.length" class="dim2 text-sm">空空如也，去宝树摇落或副本寻宝吧。</div>
@@ -105,9 +113,10 @@
             <span v-else class="dim2 text-sm">空 位</span>
           </div>
         </div>
-        <div class="text-xs mt-2">
-          <span class="dim">法宝共鸣：</span>
-          <span v-for="c in TREASURE_COMBOS" :key="c.n" class="chip mr-1 mb-1" :class="comboActive(c.ids) ? 'chip-gold' : ''">{{ c.n }}{{ comboActive(c.ids) ? '（已激活）' : '' }}·{{ c.desc }}</span>
+        <div class="flex items-center gap-2 mt-2 text-xs flex-wrap">
+          <span class="dim">法宝共鸣</span>
+          <span>已生效 <b class="gold">{{ activeComboCount }}</b> / {{ TREASURE_COMBOS.length }} 条</span>
+          <button class="btn btn-xs" @click="g.pushModal('combos')">共鸣一览</button>
         </div>
         <div class="flex gap-2 mt-2 flex-wrap">
           <button class="btn btn-sm" @click="g.combineTreasure('fabao')">碎片合成（碎片×10 + 器魂×100）</button>
@@ -142,7 +151,7 @@
     <!-- ============ 灵兽 ============ -->
     <template v-else-if="tab === 'beast'">
       <div class="panel">
-        <div class="panel-t">出 战 灵 兽 <span class="text-xs dim">点卡片查看详情与培养</span></div>
+        <div class="panel-t">出 战 灵 兽</div>
         <div v-if="g.beast" class="itemcard cursor-pointer" @click="openBeast(g.beast!.id)">
           <div class="flex justify-between items-center flex-wrap gap-2">
             <div>
@@ -224,7 +233,7 @@
         </div>
       </div>
       <div class="panel">
-        <div class="panel-t">精 怪 名 录（{{ g.fam.list.length }}）<span class="text-xs dim">点卡片看详情</span></div>
+        <div class="panel-t">精 怪 名 录（{{ g.fam.list.length }}）</div>
         <div v-if="!g.fam.list.length" class="dim2 text-sm">尚未收服任何精怪，去凝珠化形吧。</div>
         <div class="grid md:grid-cols-2 gap-2">
           <div v-for="f in g.fam.list" :key="f.id" class="itemcard cursor-pointer" @click="openFam(f.id)">
@@ -405,6 +414,12 @@ function comboActive(ids: [string, string]) {
   const n2 = TREASURE_MAP[ids[1]]?.n
   return g.treasureEquipped.some(id => g.treasures.find(t => t.id === id)?.name === n1) &&
     g.treasureEquipped.some(id => g.treasures.find(t => t.id === id)?.name === n2)
+}
+const activeComboCount = computed(() => TREASURE_COMBOS.filter(c => comboActive(c.ids)).length)
+const YANG_UNLOCK = '解锁条件：达到化神期（第 5 大境界）\n消耗：仙玉 ×300 + 灵露 ×10000\n\n凝练后可获得阳神分身：\n拥有独立装备栏与共鸣，可与本体自由切换出战。'
+function yinUnlockBody() {
+  const head = g.major < 5 ? '解锁条件：先凝练阳神，并达到化神期（第 5 大境界）' : '解锁条件：先凝练阳神'
+  return `${head}\n消耗：仙玉 ×600 + 灵露 ×25000\n\n凝练后可获得阴身分身：\n拥有独立装备栏与共鸣，可与本体和阳神自由切换出战。`
 }
 
 const beastExpPct = computed(() => {

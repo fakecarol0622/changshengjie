@@ -544,7 +544,7 @@ export const useGame = defineStore('game', {
     shake() { this.fx.shake++ },
     pushModal(kind: string, data?: unknown) {
       // 全局唯一弹窗：避免同类堆叠（如连续战斗）
-      if (['battle', 'trib', 'demon', 'encounter', 'offline', 'death', 'ascend', 'item', 'pay', 'gacha', 'story', 'storynpc', 'towerpick', 'dig'].includes(kind)) {
+      if (['battle', 'trib', 'demon', 'encounter', 'offline', 'death', 'ascend', 'item', 'pay', 'gacha', 'story', 'storynpc', 'veinprev', 'realmprev', 'combos', 'towerpick', 'dig'].includes(kind)) {
         this.modals = this.modals.filter(m => m.kind !== kind)
       }
       this.modals.push({ kind, data })

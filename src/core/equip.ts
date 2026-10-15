@@ -84,12 +84,12 @@ export function rollAffixValue(k: string, q: number, stars: number, lv: number):
   return Math.round(roll * (1 + 0.06 * (q - 1)) * 10) / 10
 }
 
+// 档位权重 w=f^i（i 从最低档起）；f<1 低品常见、f>1 高品为王；出货率进一步提升倾斜度。
 export function rollQuality(qmin: number, qmax: number, luck = 0, falloff = 0.55): number {
+  const f = falloff * Math.exp(luck * 0.0015)
   const items: { w: number; v: number }[] = []
   for (let q = qmin; q <= qmax; q++) {
-    let w = Math.pow(falloff, q - qmin) // 低品常见、高品稀有
-    w *= 1 + (luck / 100) * ((q - qmin) / Math.max(1, qmax - qmin)) // 出货率向高端倾斜
-    items.push({ w, v: q })
+    items.push({ w: Math.pow(f, q - qmin), v: q })
   }
   return weighted(items)
 }
