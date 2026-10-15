@@ -104,7 +104,7 @@
           type="button" class="nav-btn" :class="{ active: activeNav === t.id }" :aria-current="activeNav === t.id ? 'page' : undefined"
           @click="goTab(t.id)"
         >
-          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="t.path" /></svg>
+          <GlyphIcon class="ni" :id="t.icon" :size="23" :stroke="1.6" />
           <span>{{ t.n }}</span>
         </button>
       </nav>
@@ -128,6 +128,7 @@ import { ROLLED_ATTRS } from './stores/game'
 import { modLines } from './core/mods'
 import Particles from './components/Particles.vue'
 import ModalHost from './components/ModalHost.vue'
+import GlyphIcon from './components/GlyphIcon.vue'
 import PanelGacha from './panels/PanelGacha.vue'
 import PanelCultivate from './panels/PanelCultivate.vue'
 import PanelMine from './panels/PanelMine.vue'
@@ -193,11 +194,11 @@ onMounted(() => document.addEventListener('click', onDocTap, true))
 onUnmounted(() => document.removeEventListener('click', onDocTap, true))
 
 const NAV = [
-  { id: 'cultivate', n: '修炼', path: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 0a4.5 4.5 0 0 1 0 9 4.5 4.5 0 0 0 0 9M12 7h.01M12 17h.01' },
-  { id: 'mine', n: '宝树', path: 'm5 20 12-12M4 5c6-4 12-2 16 5M12 4l8 6M14 8l3 3M4 19l1 1' },
-  { id: 'gear', n: '器物', path: 'M8 16 19 5l1-3-3 1L6 14M4 12l8 8M3 21l4-4M3 18l3 3' },
-  { id: 'dungeon', n: '历练', path: 'm3 20 6-13 4 7 3-11 5 17H3ZM9 7l2 3M16 3l2 4' },
-  { id: 'more', n: '更多', path: 'M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z' },
+  { id: 'cultivate', n: '修炼', icon: 'cultivate' },
+  { id: 'mine', n: '宝树', icon: 'tree' },
+  { id: 'gear', n: '器物', icon: 'gear' },
+  { id: 'dungeon', n: '历练', icon: 'dungeon' },
+  { id: 'more', n: '更多', icon: 'more' },
 ]
 const secondaryTab = computed(() => ['cave', 'sect', 'market', 'gacha', 'codex', 'social'].includes(g.tab))
 const activeNav = computed(() => secondaryTab.value ? 'more' : g.tab === 'stage' ? 'dungeon' : g.tab)

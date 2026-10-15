@@ -84,19 +84,32 @@ try {
     fresh(); g.attrs.wuXing = 0; const base = g.cultPerSec
     g.attrs.wuXing = 5; near(g.cultPerSec / base, 1.25)
   })
-  await test('普通进阶必成且不永久堆叠道心', () => {
-    fresh(); g.attrs.yeLi = 500
-    g.cultivation = g.nextReq * 2
-    const before = g.cultivation; const req = g.nextReq
-    g.tryBreakthrough()
-    assert.equal(g.lv, 1); assert.equal(g.attrs.daoXin, 5)
-    near(g.cultivation, before - req)
+  await test('普通进阶掷骰：成则消耗本阶需求且道心不变，败则损25%并获补偿', () => {
+    fresh()
+    let success = false
+    for (let i = 0; i < 60 && !success; i++) {
+      g.cultivation = g.nextReq * 2
+      const before = g.cultivation; const req = g.nextReq; const lv = g.lv; const bf = g.breakFailures
+      g.tryBreakthrough()
+      if (g.lv > lv) {
+        success = true
+        assert.equal(g.lv, lv + 1)
+        near(g.cultivation, before - req)
+        assert.equal(g.attrs.daoXin, 5)
+        assert.equal(g.modals.length, 0)
+      } else {
+        assert.equal(g.cultivation, before - Math.ceil(req * 0.25))
+        assert.equal(g.breakFailures, bf + 1)
+        if (g.modals.length) g.closeModal()
+      }
+    }
+    assert.ok(success)
     assert.equal(g.pills.podan, undefined)
-    assert.equal(g.modals.length, 0)
   })
-  await test('旧档极高道心也不能把后期突破永久顶到92%', () => {
+  await test('突破率全阶搏骰：常规局面封顶92%，高道心不越界', () => {
     assert.ok(R.breakChance(9, 3, 9, 5, 10000, 0, 27, 0) < 0.7)
-    assert.equal(R.breakChance(0, 0, 0, 5, 5, 0, 0, 0), 1)
+    assert.equal(R.breakChance(0, 0, 0, 5, 5, 0, 0, 0), 0.92)
+    assert.ok(R.breakChance(0, 0, 0, 5, 9999, 0, 0, 0) <= 0.92)
   })
   await test('失败保留储存修为，补偿有上限', () => {
     fresh(); g.major = 5; g.phase = 3; g.minor = 9
@@ -108,17 +121,19 @@ try {
     g.breakFailures = 3; const capped = g.breakChanceBase
     g.breakFailures = 30; assert.equal(g.breakChanceBase, capped)
   })
-  await test('12小时闭关跨越普通小阶，停在大境界并保留修为', () => {
-    fresh(); const result = g.cultivateFor(43200)
-    assert.equal(g.lv, 39); assert.equal(result.levels, 39)
-    assert.ok(g.cultivation > g.nextReq)
-    const consumed = Array.from({ length: 39 }, (_, lv) => R.cultReq(lv)).reduce((a, b) => a + b, 0)
-    near(result.cult, consumed + g.cultivation)
+  await test('12小时闭关只积累储存、不自动进阶，满仓即停', () => {
+    fresh()
+    const cap = g.cultivationCap
+    const result = g.cultivateFor(43200)
+    assert.equal(g.lv, 0)
     assert.equal(g.trib, null)
+    assert.ok(g.cultivation > g.nextReq * 10)
+    near(result.cult, g.cultivation)
+    near(g.cultivation, cap)
+    assert.ok(result.overflow < 1e-6)
   })
-  await test('关闭自动进阶后仍可储存多阶修为', () => {
-    fresh(); g.settings.autoCultivate = false
-    g.cultivateFor(3600)
+  await test('修为可储存多阶，不自动进阶', () => {
+    fresh(); g.cultivateFor(3600)
     assert.equal(g.lv, 0); assert.ok(g.cultivation > g.nextReq)
   })
   await test('储存满后准确报告溢出，旧档超额修为不会被截掉', () => {
@@ -181,13 +196,13 @@ try {
     fresh(); g.major = 1; g.die('test'); const points = g.reinc.points
     g.reincarnate(); assert.equal(g.reinc.points, points)
   })
-  await test('旧存档迁移补设置和打坐字段，保留已有资源/领取状态', () => {
+  await test('旧存档迁移补默认字段，保留已有资源/领取状态', () => {
     fresh(); g.daily.daySigned = true; g.daily.chestTaken = true; g.attrs.daoXin = 120
     const saved = JSON.parse(JSON.stringify(g.serialize())); delete saved.balanceVersion
-    delete saved.settings.autoCultivate; delete saved.daily.meditations; delete saved.breakFailures
+    delete saved.gender; delete saved.daily.meditations; delete saved.breakFailures
     saved.daily.day = Math.floor(saved.lastTick / 86400000)
     g.$reset(); g.applyLoad(saved)
-    assert.equal(g.settings.autoCultivate, true); assert.equal(g.daily.meditations, 0)
+    assert.equal(g.gender, '男'); assert.equal(g.daily.meditations, 0)
     assert.equal(g.attrs.daoXin, 120); assert.deepEqual(g.res, saved.res)
     g.dailyReset(); assert.equal(g.daily.daySigned, true); assert.equal(g.daily.chestTaken, true)
   })
@@ -248,7 +263,8 @@ try {
   })
   await test('离线结算立即存档，再次加载不会重复领；死亡期间不发收益', () => {
     fresh(); g.lastTick = now - 43200000; g.save(); g.$reset(); g.init()
-    assert.equal(g.lv, 39); assert.ok(g.modals.some(x => x.kind === 'offline'))
+    assert.equal(g.lv, 0); assert.ok(g.cultivation > g.nextReq)
+    assert.ok(g.modals.some(x => x.kind === 'offline'))
     const resources = { ...g.res }; g.$reset(); g.init()
     assert.deepEqual(g.res, resources)
     assert.ok(!g.modals.some(x => x.kind === 'offline'))

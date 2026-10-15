@@ -106,22 +106,22 @@
       <div class="panel-t">仙 途 福 利 <span class="text-xs dim">每日福利，点开即领</span></div>
       <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="!g.daily.daySigned ? 'reward-ready' : ''" @click="g.pushModal('signin')">
-          <span class="text-base leading-none">📅</span><span class="text-[11px]">签到</span>
+          <GlyphIcon id="signin" :size="21" /><span class="text-[11px]">签到</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="bundleReady ? 'reward-ready' : ''" @click="g.pushModal('bundle')">
-          <span class="text-base leading-none">🎁</span><span class="text-[11px]">大礼包</span>
+          <GlyphIcon id="bundle" :size="21" /><span class="text-[11px]">大礼包</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="dailyReady ? 'reward-ready' : ''" @click="g.pushModal('daily')">
-          <span class="text-base leading-none">📋</span><span class="text-[11px]">日常</span>
+          <GlyphIcon id="daily" :size="21" /><span class="text-[11px]">日常</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="onlineReady ? 'reward-ready' : ''" @click="g.pushModal('online')">
-          <span class="text-base leading-none">⏳</span><span class="text-[11px]">在线</span>
+          <GlyphIcon id="online" :size="21" /><span class="text-[11px]">在线</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="isActiveNow ? 'reward-ready' : ''" @click="g.pushModal('activity')">
-          <span class="text-base leading-none">🗓</span><span class="text-[11px]">活动</span>
+          <GlyphIcon id="activity" :size="21" /><span class="text-[11px]">活动</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="新手目标：达成即领奖励" @click="g.pushModal('goals')">
-          <span class="text-base leading-none">🎯</span><span class="text-[11px]">目标</span>
+          <GlyphIcon id="goals" :size="21" /><span class="text-[11px]">目标</span>
         </button>
       </div>
     </div>
@@ -131,19 +131,19 @@
       <div class="panel-t">仙 途 万 象 <span class="text-xs dim">天机阁与榜单 · 纪事与江湖</span></div>
       <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="图鉴 / 称号 / 共鸣典藏" @click="props.go?.('codex')">
-          <span class="text-base leading-none">📜</span><span class="text-[11px]">天机阁</span>
+          <GlyphIcon id="codex" :size="21" /><span class="text-[11px]">天机阁</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="天骄榜：天下修士战力排位" @click="g.openSocial('rank')">
-          <span class="text-base leading-none">🏆</span><span class="text-[11px]">天骄榜</span>
+          <GlyphIcon id="rank" :size="21" /><span class="text-[11px]">天骄榜</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="论道台：消耗论道帖与修士论道" @click="g.openSocial('pvp')">
-          <span class="text-base leading-none">⚔</span><span class="text-[11px]">论道台</span>
+          <GlyphIcon id="pvp" :size="21" /><span class="text-[11px]">论道台</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="众生百态：结交修士 / 指点 / 送礼" @click="g.openSocial('npc')">
-          <span class="text-base leading-none">👥</span><span class="text-[11px]">众生百态</span>
+          <GlyphIcon id="npc" :size="21" /><span class="text-[11px]">众生百态</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="storyReady ? 'reward-ready' : ''" @click="g.pushModal('storybook')">
-          <span class="text-base leading-none">📖</span><span class="text-[11px]">纪事</span>
+          <GlyphIcon id="story" :size="21" /><span class="text-[11px]">纪事</span>
         </button>
       </div>
     </div>
@@ -171,6 +171,7 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
+import GlyphIcon from '../components/GlyphIcon.vue'
 import { useGame, keyName, DAILY_TASKS, DAILY_CHEST_POINTS, MEDITATE_MAX, ROLLED_ATTRS } from '../stores/game'
 import { LV_MAX } from '../data/realms'
 import { fmt, fmt1, fmtTime, pct } from '../core/format'
