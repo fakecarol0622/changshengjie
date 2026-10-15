@@ -1,14 +1,5 @@
 <template>
   <div class="flex flex-col gap-3">
-    <div class="panel">
-      <div class="panel-t">仙 途 百 业 <span class="text-xs dim">修行之外，亦有天地</span></div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        <button v-for="entry in entries" :key="entry.id" class="system-entry" @click="props.go(entry.id)">
-          <span class="system-seal" aria-hidden="true"><GlyphIcon :id="entry.icon" :size="20" :stroke="1.7" /></span>
-          <span><b class="gold block">{{ entry.name }}</b><span class="text-xs dim">{{ entry.desc }}</span></span>
-        </button>
-      </div>
-    </div>
     <!-- 工具（弹窗化） -->
     <div class="panel">
       <div class="panel-t">工 具</div>
@@ -49,15 +40,7 @@ import { useGame } from '../stores/game'
 import { fmt } from '../core/format'
 import GlyphIcon from '../components/GlyphIcon.vue'
 
-const props = defineProps<{ go: (t: string) => void }>()
-const entries = [
-  { id: 'cave', icon: 'cave', name: '洞府', desc: '灵田 · 炼丹 · 修炼设施' },
-  { id: 'sect', icon: 'sect', name: '宗门', desc: '传承 · 任务 · 门人' },
-  { id: 'market', icon: 'market', name: '坊市', desc: '交易 · 拍卖 · 奇货' },
-  { id: 'gacha', icon: 'compass', name: '仙缘', desc: '寻仙 · 精怪 · 收藏' },
-  { id: 'codex', icon: 'codex', name: '天机阁', desc: '图鉴 · 称号 · 共鸣' },
-  { id: 'social', icon: 'npc', name: '江湖', desc: '修士 · 关系 · 榜单' },
-]
+defineProps<{ go: (t: string) => void }>()
 const g = useGame()
 
 const renounceArm = ref(false)

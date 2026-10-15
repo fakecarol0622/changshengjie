@@ -37,7 +37,7 @@
         </div>
 
         <div class="panel !p-3 mb-3">
-          <div class="text-center text-xs dim mb-1">初 始 道 基 <span class="dim2">（可无限重掷）</span></div>
+          <div class="text-center text-xs dim mb-1">初 始 道 基</div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             <div v-for="[k, label, d] in ROLLED_ATTRS" :key="k" class="text-center" :title="d">
               <div>{{ label }} <b class="gold">{{ attrVal(k) }}</b></div>
@@ -51,16 +51,16 @@
           <div>天生灵根：<b class="text-lg" :style="{ color: g.rootColor }">{{ g.root.n }}</b> <span class="dim">修行 ×{{ g.root.mult }}</span></div>
           <div class="dim text-xs mt-1">{{ g.root.desc }}</div>
           <div v-if="g.physique" class="gold text-xs mt-1">体质觉醒：{{ g.physique }}</div>
-          <button class="btn btn-xs mt-2" @click="g.rerollRoot()">重掷灵根（不限次）</button>
+          <button class="btn btn-xs mt-2" @click="g.rerollRoot()">重掷灵根</button>
         </div>
 
         <div class="panel !p-3 mb-3">
-          <div class="text-center text-xs dim mb-1">先 天 气 运（命格） <span class="dim2">共 {{ TRAIT_COUNT }} 种 · 可无限重掷</span></div>
+          <div class="text-center text-xs dim mb-1">先 天 气 运（命格） <span class="dim2">共 {{ TRAIT_COUNT }} 种</span></div>
           <div v-for="tid in g.traits" :key="tid" class="text-xs text-center py-1">
             <div><b :class="traitCls(tid)">【{{ traitDef(tid).n }}】</b> <span class="dim">{{ traitDef(tid).desc }}</span></div>
             <div class="text-[11px] jade">{{ traitModText(tid) }}</div>
           </div>
-          <button class="btn btn-xs w-full mt-2" @click="g.rerollTraits()">重掷气运（不限次）</button>
+          <button class="btn btn-xs w-full mt-2" @click="g.rerollTraits()">重掷 气运</button>
         </div>
 
         <div class="text-xs dim2 mb-3">随机种子 {{ g.seed }} · 每一次轮回皆是不同的天机</div>
@@ -94,7 +94,7 @@
       </header>
 
       <main class="max-w-5xl mx-auto px-3 pt-3 pb-28">
-        <button v-if="secondaryTab" class="btn btn-xs mb-3" @click="goTab('more')">← 返回更多</button>
+        <button v-if="secondaryTab" class="btn btn-xs mb-3" @click="goTab('cultivate')">← 返回修炼</button>
         <component :is="panelComp" :go="goTab" />
       </main>
 
@@ -198,10 +198,15 @@ const NAV = [
   { id: 'mine', n: '宝树', icon: 'tree' },
   { id: 'gear', n: '器物', icon: 'gear' },
   { id: 'dungeon', n: '历练', icon: 'dungeon' },
+  { id: 'cave', n: '洞府', icon: 'cave' },
+  { id: 'sect', n: '宗门', icon: 'sect' },
+  { id: 'market', n: '坊市', icon: 'market' },
+  { id: 'gacha', n: '仙缘', icon: 'compass' },
   { id: 'more', n: '更多', icon: 'more' },
 ]
-const secondaryTab = computed(() => ['cave', 'sect', 'market', 'gacha', 'codex', 'social'].includes(g.tab))
-const activeNav = computed(() => secondaryTab.value ? 'more' : g.tab === 'stage' ? 'dungeon' : g.tab)
+// 洞府/宗门/坊市/仙缘 已入底部主 tab；天机阁/江湖（二级页）入口在首页「仙途万象」
+const secondaryTab = computed(() => ['codex', 'social'].includes(g.tab))
+const activeNav = computed(() => secondaryTab.value ? 'cultivate' : g.tab === 'stage' ? 'dungeon' : g.tab)
 
 const PANELS: Record<string, unknown> = {
   cultivate: PanelCultivate,

@@ -60,6 +60,25 @@
         点开修士查看详情、投其所好赠礼、请教论道，还可切磋、拜师、收徒。
         <button class="info-dot" type="button" aria-label="结交玩法说明" @click="g.pushModal('text', { title: '结交玩法', body: SOCIAL_INFO })">!</button>
       </div>
+      <!-- 仙途故人：主线剧情人物常驻，状态随剧情推进 -->
+      <div class="panel">
+        <div class="panel-t">仙 途 故 人 <span class="text-xs dim">主线卷宗中的人物 · 状态随剧情推进</span></div>
+        <div v-if="g.storyNpcList.length" class="grid md:grid-cols-2 gap-2">
+          <div v-for="sn in g.storyNpcList" :key="sn.id" class="panel !p-3 cursor-pointer" :class="sn.gone ? 'opacity-60' : ''" @click="g.pushModal('storynpc', sn.id)">
+            <div class="flex justify-between items-center flex-wrap gap-1">
+              <div>
+                <b class="gold">{{ sn.real }}</b>
+                <span class="chip ml-1">{{ sn.name }}</span>
+                <span class="chip ml-1" :class="sn.align === '魔' ? 'chip-red' : sn.align === '正' ? 'chip-jade' : ''">{{ sn.align }}道</span>
+                <span class="chip ml-1">{{ sn.sect }}</span>
+              </div>
+              <span class="chip" :class="sn.gone ? 'chip-red' : 'chip-gold'">{{ sn.status }}</span>
+            </div>
+            <div class="text-xs dim mt-1">{{ sn.desc }}</div>
+          </div>
+        </div>
+        <div v-else class="text-xs dim2">阅卷之后，主线中的人物会陆续记入此间。</div>
+      </div>
       <div class="grid md:grid-cols-2 gap-2">
         <div v-for="n in g.npcs" :key="n.id" class="panel !p-3 cursor-pointer" @click="openNpc(n.id)">
           <div class="flex justify-between items-center flex-wrap gap-1">

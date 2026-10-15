@@ -24,6 +24,7 @@ import { FAM_MAP, FAM_RARITY, catchRoll } from '../data/familiars'
 import { GACHA_COST_10, GACHA_COST_1, GACHA_PITY, rollGacha, type GachaResult } from '../data/gacha'
 import { COLLECTS, GOALS, MONTH_CARD, ONLINE_REWARDS, PASS_MAX, PASS_XP_PER, PVP_SHOP, PVP_TIERS, passFree, passPrem, passSeason, pvpRank, pvpTierIdx, weekSettle } from '../data/meta'
 import { STORY_MAP, chaptersForGender, chapterForGender, storyAtStage, storyChapterReady, type StoryChapter, type StoryCtx } from '../data/mainstory'
+import { STORY_NPCS, type StoryNpcDef } from '../data/storyNpcs'
 import { STAGE_MAX, stageBonus, stageEnemy, stageRewards, stageSeg } from '../data/stages'
 import { GIFTS, GIFT_MAP, giftFavor, npcLikes } from '../data/gifts'
 import { rollTraits } from '../data/traits'
@@ -375,6 +376,24 @@ export const useGame = defineStore('game', {
     storyById(): (id: string) => StoryChapter | undefined {
       return (id: string) => chapterForGender(id, this.gender)
     },
+    // —— 仙途故人：剧情人物常驻「众生百态」，状态随卷宗推进（不落存档，全部由 story.done 派生） ——
+    storyNpcList(): (StoryNpcDef & { status: string; desc: string; gone: boolean; history: string[] })[] {
+      const done = this.story.done
+      return STORY_NPCS.filter(d => done.includes(d.appear)).map(d => {
+        let status = d.first.status
+        let desc = d.first.desc
+        let gone = false
+        const history = [`《${STORY_MAP[d.appear]?.n ?? ''}》${d.first.status}`]
+        for (const st of d.stages) {
+          if (!done.includes(st.after)) continue
+          status = st.status
+          desc = st.desc
+          gone = !!st.gone
+          history.push(`《${STORY_MAP[st.after]?.n ?? ''}》${st.status}`)
+        }
+        return { ...d, status, desc, gone, history }
+      })
+    },
     storyReadyAny(): boolean {
       const list = (this as unknown as { storyList: StoryChapter[] }).storyList
       const ctx = (this as unknown as { storyCtx: StoryCtx }).storyCtx
@@ -525,7 +544,7 @@ export const useGame = defineStore('game', {
     shake() { this.fx.shake++ },
     pushModal(kind: string, data?: unknown) {
       // 全局唯一弹窗：避免同类堆叠（如连续战斗）
-      if (['battle', 'trib', 'demon', 'encounter', 'offline', 'death', 'ascend', 'item', 'pay', 'gacha', 'story', 'towerpick', 'dig'].includes(kind)) {
+      if (['battle', 'trib', 'demon', 'encounter', 'offline', 'death', 'ascend', 'item', 'pay', 'gacha', 'story', 'storynpc', 'towerpick', 'dig'].includes(kind)) {
         this.modals = this.modals.filter(m => m.kind !== kind)
       }
       this.modals.push({ kind, data })

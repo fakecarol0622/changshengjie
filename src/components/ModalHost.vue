@@ -306,6 +306,28 @@
         </div>
       </template>
 
+      <!-- 仙途故人 -->
+      <template v-else-if="top.kind === 'storynpc' && storyNpcView">
+        <div class="modal-title gold">{{ storyNpcView.real }} <span class="text-sm dim">{{ storyNpcView.name }}</span></div>
+        <div class="flex justify-center gap-1 flex-wrap text-xs my-2">
+          <span class="chip">{{ storyNpcView.title }}</span>
+          <span class="chip">{{ storyNpcView.sect }}</span>
+          <span class="chip" :class="storyNpcView.align === '魔' ? 'chip-red' : storyNpcView.align === '正' ? 'chip-jade' : ''">{{ storyNpcView.align }}道</span>
+        </div>
+        <div class="panel !p-3 mb-2">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="chip" :class="storyNpcView.gone ? 'chip-red' : 'chip-gold'">{{ storyNpcView.status }}</span>
+            <span v-if="storyNpcView.gone" class="text-xs dim">已离场</span>
+          </div>
+          <p class="text-sm leading-relaxed">{{ storyNpcView.desc }}</p>
+        </div>
+        <div class="text-xs dim mb-1">剧 情 轨 迹</div>
+        <div class="flex flex-col gap-1 text-xs" style="max-height: 26vh; overflow-y: auto">
+          <div v-for="(h, i) in storyNpcView.history" :key="i" :class="i === storyNpcView.history.length - 1 ? 'gold' : 'dim2'">· {{ h }}</div>
+        </div>
+        <button class="btn w-full mt-3" @click="g.closeModal()">关 闭</button>
+      </template>
+
       <!-- 切磋邀约 -->
       <template v-else-if="top.kind === 'npcduel' && duelView">
         <div class="modal-title">切 磋 之 邀</div>
@@ -823,6 +845,13 @@ const storyView = computed(() => {
 // 卷宗：已阅计数与中文序号
 const CN_NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '二十一', '二十二', '二十三', '二十四', '二十五', '二十六', '二十七', '二十八', '二十九', '三十']
 const storyDoneCount = computed(() => g.storyList.filter(c => g.story.done.includes(c.id)).length)
+
+// —— 仙途故人 ——
+const storyNpcView = computed(() => {
+  const t = top.value
+  if (t?.kind !== 'storynpc') return null
+  return g.storyNpcList.find(s => s.id === String(t.data)) || null
+})
 
 // —— 切磋邀约 ——
 const duelView = computed<Npc | null>(() => {
