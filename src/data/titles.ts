@@ -6,7 +6,7 @@ export interface TitleCtx {
   rank: number // 天骄榜排名（1 = 第一）
   lingshi: number
   xianyu: number
-  pulls: number // 挖掘次数
+  pulls: number // 摇落次数
   bestQ: number // 图鉴最高品质
   codexCount: number
   sect: boolean // 已开宗立派
@@ -48,7 +48,7 @@ export const TITLES: TitleDef[] = [
   { id: 'hanshan', n: '力可撼山', desc: '战力达到 1000 万', r: 4, ok: c => c.power >= 1e7 },
   { id: 'fujia', n: '富甲一方', desc: '持有灵石 10 万', r: 2, ok: c => c.lingshi >= 1e5 },
   { id: 'wanguan', n: '腰缠万贯', desc: '持有仙玉 200', r: 2, ok: c => c.xianyu >= 200 },
-  { id: 'kuangwang', n: '矿脉之王', desc: '挖掘灵脉 500 次', r: 3, ok: c => c.pulls >= 500 },
+  { id: 'kuangwang', n: '宝树之王', desc: '摇落宝树 500 次', r: 3, ok: c => c.pulls >= 500 },
   { id: 'ouhuang', n: '天选欧皇', desc: '获得 15 品以上装备', r: 5, ok: c => c.bestQ >= 15 },
   { id: 'shoucang', n: '收藏大家', desc: '图鉴收录 60 件装备', r: 3, ok: c => c.codexCount >= 60 },
   { id: 'kuishou', n: '天骄魁首', desc: '登顶天骄榜第 1 名', r: 4, ok: c => c.rank === 1 },
@@ -67,6 +67,6 @@ export const TITLES: TitleDef[] = [
   { id: 'sanqing', n: '一气化三清', desc: '本源分化，阴阳双分身齐备', r: 4, ok: c => c.clones >= 2 },
   { id: 'yaowang', n: '妖王克星', desc: '妖王殿伤害榜登顶（当日）', r: 4, ok: c => c.yaoRank === 1 },
   { id: 'baiyao', n: '力压群妖', desc: '妖王殿伤害榜进入前三（当日）', r: 3, ok: c => c.yaoRank >= 1 && c.yaoRank <= 3 },
-  { id: 'shumai', n: '疏脉师', desc: '烛龙脉疏通至 18 级（玄脉）', r: 3, ok: c => c.veinLv >= 18 },
-  { id: 'zulong', n: '祖脉之主', desc: '烛龙脉疏通至 54 级（祖龙脉）', r: 5, ok: c => c.veinLv >= 54 },
+  { id: 'shumai', n: '育树师', desc: '太初宝树培育至 18 重（青枝）', r: 3, ok: c => c.veinLv >= 18 },
+  { id: 'zulong', n: '通天之主', desc: '太初宝树培育至 54 重（通天）', r: 5, ok: c => c.veinLv >= 54 },
 ]

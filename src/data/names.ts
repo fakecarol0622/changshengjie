@@ -25,6 +25,23 @@ const GIVEN_NAMES = [
   '轻舟', '南风', '望尘', '寄北', '拾春', '衔月', '知微', '尽欢', '拂衣', '木兮', '子墨', '若愚',
 ]
 
+// 女子名池（与通用池合并抽取，偏温婉清丽）
+const GIVEN_FEMALE = [
+  '昭昭', '皎皎', '霏霏', '采薇', '静姝', '清漪', '涟漪', '凝霜', '漱玉', '眠雪',
+  '抱月', '揽星', '簪星', '纨素', '青黛', '豆蔻', '若薇', '紫苏', '白芷', '辛夷',
+  '佩兰', '汀兰', '蒹葭', '灼华', '桃夭', '螺黛', '惊鹄', '扶月', '拾翠', '扑萤',
+  '逐月', '衔霜', '折枝', '青梅', '弄影', '弄玉', '含章', '令仪', '柔止', '琼琚',
+  '静女', '婉扬', '清妍', '皎月', '青栀', '绛雪', '步月', '小满', '朝颜', '晚棠',
+]
+
+// 男子名池（与通用池合并抽取，偏风骨意气）
+const GIVEN_MALE = [
+  '怀瑾', '握瑜', '枕戈', '负雪', '横槊', '问天', '断水', '斩月', '酌酒', '策马',
+  '挽弓', '踏歌', '抱剑', '守砚', '登高', '逐日', '御风', '朝天', '叩关', '镇岳',
+  '立雪', '闻鸡', '磨剑', '试剑', '砺锋', '破阵', '陷阵', '孤鸿', '破晓', '怀远',
+  '决明', '定山', '定海', '涉江', '济沧', '勒马', '听雷', '振衣', '中流', '击水',
+]
+
 // 二字典雅道号（可直接使用）
 const DAO_ELEGANT = [
   '抱朴', '守拙', '玄微', '无尘', '怀素', '长生', '无垢', '观澜', '听雪', '忘机', '澄心', '拂尘',
@@ -50,10 +67,15 @@ const DAO_SUFFIX = [
   '散人', '真人', '居士', '道人', '道长', '剑客', '上人', '尊者', '先生', '山人',
   '客卿', '修士', '隐士', '逸士', '逸人', '羽士',
 ]
+// 女性专属道号后缀
+const DAO_SUFFIX_F = ['仙子', '女侠', '仙姑']
+// 男性专属道号后缀
+const DAO_SUFFIX_M = ['公子', '大侠']
 
-/** 随机姓名：姓 + 名（如「苏听澜」「慕容云栖」） */
-export function randomRealName(): string {
-  return pick(SURNAMES) + pick(GIVEN_NAMES)
+/** 随机姓名：姓 + 名（如「苏听澜」「沈婉清」）；性别传「女」时从女子名池抽取 */
+export function randomRealName(gender: string = '男'): string {
+  const pool = gender === '女' ? [...GIVEN_NAMES, ...GIVEN_FEMALE] : [...GIVEN_NAMES, ...GIVEN_MALE]
+  return pick(SURNAMES) + pick(pool)
 }
 
 // ———— 宗门名 ————
@@ -83,11 +105,12 @@ export function randomSectName(): string {
   return pick(SECT_PREFIX) + pick(SECT_CORE) + pick(SECT_TYPE)
 }
 
-/** 随机道号：二字雅号 / 修饰词单用 / 修饰词+身份（如「参同」「望岳」「青云散人」） */
-export function randomDaoName(): string {
+/** 随机道号：二字雅号 / 修饰词单用 / 修饰词+身份（如「参同」「望岳」「青云散人」「紫霄仙子」） */
+export function randomDaoName(gender: string = '男'): string {
   const r = ri(1, 100)
   if (r <= 20) return pick(DAO_ELEGANT)
   if (r <= 32) return pick(DAO_PREFIX)
-  return pick(DAO_PREFIX) + pick(DAO_SUFFIX)
+  const suffix = gender === '女' ? [...DAO_SUFFIX, ...DAO_SUFFIX_F] : [...DAO_SUFFIX, ...DAO_SUFFIX_M]
+  return pick(DAO_PREFIX) + pick(suffix)
 }
 

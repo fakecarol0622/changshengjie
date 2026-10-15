@@ -15,14 +15,14 @@
           <button v-if="g.clones.yangOpen" class="btn btn-xs" :class="g.clones.active === 'yang' ? 'btn-gold' : ''" @click="g.setActiveBody('yang')">
             阳神 · {{ fmt(g.bodyPower('yang')) }}
           </button>
-          <button v-else class="btn btn-xs" :class="g.major >= 5 ? 'btn-gold' : ''" :disabled="g.major < 5" title="化神期解锁 · 消耗 仙玉×300 + 开脉石×10000" @click="g.openClone('yang')">
-            凝练阳神（仙玉300·开脉石10000）
+          <button v-else class="btn btn-xs" :class="g.major >= 5 ? 'btn-gold' : ''" :disabled="g.major < 5" title="化神期解锁 · 消耗 仙玉×300 + 灵露×10000" @click="g.openClone('yang')">
+            凝练阳神（仙玉300·灵露10000）
           </button>
           <button v-if="g.clones.yinOpen" class="btn btn-xs" :class="g.clones.active === 'yin' ? 'btn-gold' : ''" @click="g.setActiveBody('yin')">
             阴身 · {{ fmt(g.bodyPower('yin')) }}
           </button>
-          <button v-else class="btn btn-xs" :class="g.major >= 5 && g.clones.yangOpen ? 'btn-gold' : ''" :disabled="g.major < 5 || !g.clones.yangOpen" :title="g.major < 5 ? '化神期解锁' : !g.clones.yangOpen ? '需先凝练阳神' : '消耗 仙玉×600 + 开脉石×25000'" @click="g.openClone('yin')">
-            凝练阴身（仙玉600·开脉石25000）
+          <button v-else class="btn btn-xs" :class="g.major >= 5 && g.clones.yangOpen ? 'btn-gold' : ''" :disabled="g.major < 5 || !g.clones.yangOpen" :title="g.major < 5 ? '化神期解锁' : !g.clones.yangOpen ? '需先凝练阳神' : '消耗 仙玉×600 + 灵露×25000'" @click="g.openClone('yin')">
+            凝练阴身（仙玉600·灵露25000）
           </button>
         </div>
         <div class="text-xs dim2 mt-1">分身拥有独立装备栏与共鸣；切换后长阶、论道台、副本等战斗自动沿用其配装，道基/灵兽/精怪/法宝/丹药共享。</div>
@@ -62,20 +62,20 @@
           <span class="flex gap-1 flex-wrap items-center">
             <button class="btn btn-xs" @click="filterSlot = null">全部</button>
             <button class="btn btn-xs" @click="sortDesc = !sortDesc">评分{{ sortDesc ? '降序' : '升序' }}</button>
-            <button class="btn btn-xs btn-gold" title="每个部位换上评分最高的装备" @click="g.autoEquipBest()">一键最优</button>
+            <button class="btn btn-xs btn-gold" title="逐个部位按面板战力推荐；共鸣搭配与实战克制请自行调整" @click="g.autoEquipBest()">战力推荐</button>
             <select v-model.number="massQ" class="btn btn-xs" style="padding: 2px 6px">
               <option v-for="q in 10" :key="q" :value="q">≤{{ q }} 品</option>
             </select>
             <button
               class="btn btn-xs" :class="massArmed ? 'btn-red' : ''"
               :disabled="junkCount === 0"
-              :title="`分解背包中未穿戴且品质 ≤${massQ} 的装备，回收 20% 评分灵石`"
+              :title="`分解背包中未穿戴且品质 ≤${massQ} 的装备，回收20%评分灵石，每件至少5`"
               @click="doMass"
             >{{ massArmed ? `确认分解 ${junkCount} 件` : `分解（${junkCount}）` }}</button>
           </span>
         </div>
         <div class="flex flex-col gap-2 max-h-[540px] overflow-y-auto pr-1">
-          <div v-if="!invFiltered.length" class="dim2 text-sm">空空如也，去灵脉挖掘或副本寻宝吧。</div>
+          <div v-if="!invFiltered.length" class="dim2 text-sm">空空如也，去宝树摇落或副本寻宝吧。</div>
           <ItemCard v-for="it in invFiltered" :key="it.id" :e="it">
             <template #actions>
               <button class="btn btn-xs" :class="wornIn(it.id) === g.clones.active ? '' : 'btn-gold'" @click="g.equipItem(it.id)">
@@ -84,7 +84,7 @@
               <div class="flex gap-1">
                 <button class="btn btn-xs" title="洗炼石×3起（锁词条越高越贵），重铸词条数值" @click="g.reforge(it.id, 'value')">洗数值</button>
                 <button class="btn btn-xs" title="改命石×1起（锁词条越高越贵），重铸词条类型" @click="g.reforge(it.id, 'type')">洗类型</button>
-                <button class="btn btn-xs btn-red" @click="g.discardOne(it.id)">丢</button>
+                <button class="btn btn-xs btn-red" :disabled="g.wornByAll.has(it.id)" @click="g.discardOne(it.id)">分解</button>
               </div>
             </template>
           </ItemCard>
@@ -117,7 +117,7 @@
       </div>
       <div class="panel">
         <div class="panel-t">所 有 法 宝</div>
-        <div v-if="!g.treasures.length" class="dim2 text-sm">尚无法宝。器魂深渊与灵脉深处可寻碎片，合成法宝。</div>
+        <div v-if="!g.treasures.length" class="dim2 text-sm">尚无法宝。器魂深渊与宝树深处可寻碎片，合成法宝。</div>
         <div class="flex flex-col gap-2">
           <div v-for="t in g.treasures" :key="t.id" class="itemcard" :class="'bq' + t.q">
             <div class="flex justify-between items-start gap-2 flex-wrap">

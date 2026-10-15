@@ -17,7 +17,8 @@ export const SECTS: SectDef[] = [
   { id: 'youming', n: '幽冥宗', path: '魔道·魔修', feature: '吸血、斩杀、高风险', desc: '幽冥深处宗门，修血煞之道，亦正亦邪。', mods: { lifestealAdd: 3 } },
   { id: 'taixu', n: '太虚观', path: '正道·阵修', feature: '阵法、护盾、控制', desc: '观中星斗为阵，以阵御敌，万法不侵。', mods: { dmgReduceAdd: 3 } },
 ]
-export const SECT_MAP: Record<string, SectDef> = Object.fromEntries(SECTS.map(s => [s.id, s]))
+// 新操作传 ID，旧存档及共鸣保存显示名；两种键均可解析。
+export const SECT_MAP: Record<string, SectDef> = Object.fromEntries(SECTS.flatMap(s => [[s.id, s], [s.n, s]]))
 
 export interface RankDef { n: string; contrib: number; realm: number; phase: number; tenure: number; disc: number }
 // 第20批：晋升三门槛 —— 贡献 + 境界（含小境界）+ 任期（天）；宗门任务/突破后自动触发考核
@@ -36,7 +37,7 @@ export const RANKS: RankDef[] = [
 // 宗门商店（贡献兑换）
 export interface SectShopItem { id: string; n: string; price: number; kind: string; amount: number; minRank: number }
 export const SECT_SHOP: SectShopItem[] = [
-  { id: 's_lingmai', n: '开脉石×30', price: 60, kind: 'lingmai', amount: 30, minRank: 0 },
+  { id: 's_lingmai', n: '灵露×30', price: 60, kind: 'lingmai', amount: 30, minRank: 0 },
   { id: 's_lingshi', n: '灵石×2000', price: 50, kind: 'lingshi', amount: 2000, minRank: 0 },
   { id: 's_xilian', n: '洗练石×5', price: 120, kind: 'xilian', amount: 5, minRank: 1 },
   { id: 's_gongming', n: '共鸣石×5', price: 120, kind: 'gongming', amount: 5, minRank: 1 },

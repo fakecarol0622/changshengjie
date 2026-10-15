@@ -14,7 +14,7 @@ export interface DungeonDef {
   rewards: string
 }
 export const DUNGEONS: DungeonDef[] = [
-  { id: 'kuangku', n: '浮尘矿窟', type: '资源', desc: '矿脉纵横，可采开脉石与粗矿', daily: 6, enemies: ['矿窟妖鼠', '石魈', '矿灵', '土行蜈'], rewards: '开脉石、装备' },
+  { id: 'kuangku', n: '浮尘矿窟', type: '资源', desc: '矿脉纵横，可采灵露与粗矿', daily: 6, enemies: ['矿窟妖鼠', '石魈', '矿灵', '土行蜈'], rewards: '灵露、装备' },
   { id: 'jianzhong', n: '万剑冢', type: '装备', desc: '万剑埋骨之地，剑意森然', daily: 4, enemies: ['剑冢怨灵', '断剑老鬼', '守冢剑奴', '残锋战魂'], rewards: '攻击向装备、剑意' },
   { id: 'hantan', n: '星落寒潭', type: '装备', desc: '天外陨星坠处，寒气刺骨', daily: 4, enemies: ['寒潭水鬼', '星陨兽', '冰晶螭', '玄龟'], rewards: '防御向装备、星陨石' },
   { id: 'youlins', n: '万兽幽林', type: '灵兽', desc: '古林深处兽吼不绝', daily: 5, enemies: ['狂暴野猪', '赤目狼王', '幽林蟒', '三尾灵狐'], rewards: '灵兽蛋、兽魂' },
@@ -39,11 +39,14 @@ export const DIFFS: DiffDef[] = [
 // ---------- 活动日历（游戏月=10 天，压缩映射 GDD 每月窗口） ----------
 export const CYCLE_DAYS = 10
 export interface ActivityDef { id: string; n: string; s: number; e: number; desc: string }
+// 天象加成（第32批大幅削弱：原 +40%/翻倍/必出 过强）
+export const TIDE_LUCK = 10 // 宝树潮·涌：摇落出货率 +%（原 40）
+export const TIDE_SURGE_MULT = 1.3 // 宝树潮·涌：暴动概率倍率（原 2）
 export const ACTIVITIES: ActivityDef[] = [
-  { id: 'tide', n: '灵脉潮汐·涌', s: 0, e: 2.5, desc: '灵脉挖掘出货率+40%，暴动概率翻倍' },
-  { id: 'beast', n: '万兽潮·临', s: 2.5, e: 5, desc: '万兽幽林产出翻倍，限定灵兽蛋' },
-  { id: 'wudao', n: '仙武论道·争', s: 5, e: 7.5, desc: '论道台对局积分翻倍，排名悬赏' },
-  { id: 'trib', n: '天劫雷渊·降', s: 7.5, e: 10, desc: '渡劫成功率+20%，雷渊必出突破材料' },
+  { id: 'tide', n: '宝树潮·涌', s: 0, e: 2.5, desc: `宝树摇落出货率+${TIDE_LUCK}%，暴动概率×${TIDE_SURGE_MULT}` },
+  { id: 'beast', n: '万兽潮·临', s: 2.5, e: 5, desc: '万兽幽林灵兽蛋更多、品质略升' },
+  { id: 'wudao', n: '仙武论道·争', s: 5, e: 7.5, desc: '论道台对局积分+30%' },
+  { id: 'trib', n: '天劫雷渊·降', s: 7.5, e: 10, desc: '渡劫承伤-8%，雷渊几率得突破材料' },
 ]
 export function cycleDay(now: number): number {
   return (now / 86400000) % CYCLE_DAYS
@@ -65,7 +68,7 @@ export const WORLD_MSGS: string[] = [
   '{n1}在剑冢拔出了仙兵「{item}」',
   '{n1}突破{realm}失败，修为大损',
   '{n1}与{n2}因机缘结仇，约战天骄榜',
-  '{n1}挖出至宝，坊市一片哗然',
+  '{n1}摇出至宝，坊市一片哗然',
   '{n1}在太古遗墟重伤而归',
   '{n1}庆云缭绕，成功突破{realm}！',
   '{n1}拍卖会上豪掷万金，拍走「{item}」',
@@ -233,10 +236,10 @@ export const ENCOUNTERS: EncounterDef[] = [
     ],
   },
   {
-    id: 'e12', q: 3, title: '灵脉暴走', text: '附近灵脉突然暴动，地涌灵潮，附近修士纷纷赶来。',
+    id: 'e12', q: 3, title: '树根暴动', text: '太初宝树根须深处突然暴动，地涌灵潮，附近修士纷纷赶来。',
     options: [
-      { label: '镇压灵脉', res: { text: '你施法镇压暴走的灵脉，灵潮退去前的馈赠尽入囊中。', lingmai: 30, gongDe: 5 } },
-      { label: '趁乱收灵', res: { text: '你趁乱收取了大把开脉石，溜之大吉。', lingmai: 45, yeLi: 2 } },
+      { label: '镇压暴动', res: { text: '你施法镇压暴动，灵潮退去前的馈赠尽入囊中。', lingmai: 30, gongDe: 5 } },
+      { label: '趁乱收晶', res: { text: '你趁乱收取了大把灵露，溜之大吉。', lingmai: 45, yeLi: 2 } },
     ],
   },
   {

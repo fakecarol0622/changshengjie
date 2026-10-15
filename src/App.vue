@@ -6,6 +6,12 @@
         <div class="text-center text-3xl gold font-bold tracking-[0.35em] my-3">长 生 劫</div>
         <p class="text-center dim text-xs mb-4">单机放置修仙 · 长生路上多劫难，问君能渡几重天</p>
 
+        <label class="text-xs dim">性 别</label>
+        <div class="flex gap-2 mb-3">
+          <button class="btn btn-sm flex-1" :class="gender === '男' ? 'btn-gold' : ''" @click="gender = '男'">男 · 少侠</button>
+          <button class="btn btn-sm flex-1" :class="gender === '女' ? 'btn-gold' : ''" @click="gender = '女'">女 · 侠女</button>
+        </div>
+
         <label class="text-xs dim">姓 名</label>
         <div class="flex gap-2 mb-3">
           <input
@@ -15,7 +21,7 @@
             maxlength="4"
             placeholder="姓甚名谁…"
           />
-          <button class="btn btn-sm shrink-0" @click="realName = randomRealName()">随 机</button>
+          <button class="btn btn-sm shrink-0" @click="realName = randomRealName(gender)">随 机</button>
         </div>
 
         <label class="text-xs dim">道 号</label>
@@ -27,7 +33,7 @@
             maxlength="8"
             placeholder="如：青云散人"
           />
-          <button class="btn btn-sm shrink-0" @click="name = randomDaoName()">随 机</button>
+          <button class="btn btn-sm shrink-0" @click="name = randomDaoName(gender)">随 机</button>
         </div>
 
         <div class="panel !p-3 mb-3">
@@ -69,6 +75,7 @@
         <div class="max-w-5xl mx-auto px-3 py-2 flex items-center justify-between gap-2 flex-wrap text-xs">
           <div class="flex items-center gap-1 flex-wrap">
             <b class="gold">{{ g.name }}</b>
+            <span v-if="g.realName" class="chip">{{ g.realName }} · {{ g.gender }}修</span>
             <span class="chip chip-gold">{{ g.realmText }}</span>
             <span v-if="g.titleEqDef" class="chip" :class="'title-r' + g.titleEqDef.r">{{ g.titleEqDef.n }}</span>
             <span v-if="g.injured > 0" class="chip chip-red">受 伤 中</span>
@@ -76,7 +83,7 @@
           </div>
           <div class="flex gap-2 flex-wrap items-center num">
             <span>灵石 <b class="gold">{{ fmt(g.res.lingshi) }}</b></span>
-            <span>开脉石 <b class="gold">{{ fmt(g.res.lingmai) }}</b></span>
+            <span>灵露 <b class="gold">{{ fmt(g.res.lingmai) }}</b></span>
             <span>仙玉 <b class="violet">{{ fmt(g.res.xianyu) }}</b></span>
             <span class="hidden sm:inline">洗练 <b class="gold">{{ g.res.xilian }}</b></span>
             <span class="hidden sm:inline">共鸣 <b class="gold">{{ g.res.gongming }}</b></span>
@@ -87,30 +94,31 @@
       </header>
 
       <main class="max-w-5xl mx-auto px-3 pt-3 pb-28">
+        <button v-if="secondaryTab" class="btn btn-xs mb-3" @click="goTab('more')">← 返回更多</button>
         <component :is="panelComp" :go="goTab" />
       </main>
 
       <nav class="nav-b">
-        <div
+        <button
           v-for="t in NAV" :key="t.id"
-          class="nav-btn" :class="{ active: g.tab === t.id }"
+          type="button" class="nav-btn" :class="{ active: activeNav === t.id }" :aria-current="activeNav === t.id ? 'page' : undefined"
           @click="goTab(t.id)"
         >
-          <span class="ni">{{ t.icon }}</span>
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="t.path" /></svg>
           <span>{{ t.n }}</span>
-        </div>
+        </button>
       </nav>
     </template>
 
     <Particles />
     <ModalHost />
-    <div v-if="tip" :key="tip.id" class="tip-bubble modal-box !p-2 !w-auto !max-w-xs text-xs float-up">{{ tip.t }}</div>
+    <div v-if="tip" :key="tip.id" class="tip-bubble toast-float modal-box !p-2 !w-auto !max-w-xs text-xs">{{ tip.t }}</div>
     <div v-if="flashOn" :key="flashKey" class="golden-flash"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGame } from './stores/game'
 import { randomDaoName, randomRealName } from './data/names'
 import { fmt } from './core/format'
@@ -136,12 +144,13 @@ import PanelStage from './panels/PanelStage.vue'
 const g = useGame()
 const name = ref('')
 const realName = ref('')
+const gender = ref<'男' | '女'>('男')
 const TRAIT_COUNT = TRAITS.length
 // 开局界面：进入时以当前转世加成重掷灵根（startGame 将沿用展示结果，不会再变），并预填随机姓名/道号
 function initStartFields() {
   g.rerollRoot()
-  if (!name.value) name.value = randomDaoName()
-  if (!realName.value) realName.value = randomRealName()
+  if (!name.value) name.value = randomDaoName(gender.value)
+  if (!realName.value) realName.value = randomRealName(gender.value)
 }
 watch(() => g.started, s => { if (!s) initStartFields() })
 onMounted(() => { if (!g.started) initStartFields() })
@@ -184,16 +193,14 @@ onMounted(() => document.addEventListener('click', onDocTap, true))
 onUnmounted(() => document.removeEventListener('click', onDocTap, true))
 
 const NAV = [
-  { id: 'cultivate', n: '修炼', icon: '☯' },
-  { id: 'mine', n: '灵脉', icon: '⛏' },
-  { id: 'gear', n: '器物', icon: '⚔' },
-  { id: 'cave', n: '洞府', icon: '🏔' },
-  { id: 'dungeon', n: '副本', icon: '🗡' },
-  { id: 'sect', n: '宗门', icon: '⛩' },
-  { id: 'market', n: '坊市', icon: '🏮' },
-  { id: 'gacha', n: '仙缘', icon: '✨' },
-  { id: 'more', n: '更多', icon: '☰' },
+  { id: 'cultivate', n: '修炼', path: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 0a4.5 4.5 0 0 1 0 9 4.5 4.5 0 0 0 0 9M12 7h.01M12 17h.01' },
+  { id: 'mine', n: '宝树', path: 'm5 20 12-12M4 5c6-4 12-2 16 5M12 4l8 6M14 8l3 3M4 19l1 1' },
+  { id: 'gear', n: '器物', path: 'M8 16 19 5l1-3-3 1L6 14M4 12l8 8M3 21l4-4M3 18l3 3' },
+  { id: 'dungeon', n: '历练', path: 'm3 20 6-13 4 7 3-11 5 17H3ZM9 7l2 3M16 3l2 4' },
+  { id: 'more', n: '更多', path: 'M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z' },
 ]
+const secondaryTab = computed(() => ['cave', 'sect', 'market', 'gacha', 'codex', 'social'].includes(g.tab))
+const activeNav = computed(() => secondaryTab.value ? 'more' : g.tab === 'stage' ? 'dungeon' : g.tab)
 
 const PANELS: Record<string, unknown> = {
   cultivate: PanelCultivate,
@@ -216,8 +223,10 @@ function goTab(t: string) {
   window.scrollTo({ top: 0 })
 }
 
-function start() {
-  g.startGame(name.value.trim(), realName.value.trim())
+async function start() {
+  g.startGame(name.value.trim(), realName.value.trim(), gender.value)
+  await nextTick()
+  window.scrollTo({ top: 0 })
 }
 
 // 闪光与震动

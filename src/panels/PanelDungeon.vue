@@ -28,8 +28,8 @@
           <span
             class="text-xs shrink-0"
             :class="recRatio(dsel[d.id] || 0) >= 1.5 ? 'jade' : recRatio(dsel[d.id] || 0) >= 0.8 ? 'gold' : 'red'"
-            title="你的战力 ÷ 敌方单体参考战力：≥1.5 稳胜，＜0.8 危险"
-          >战力比 ×{{ recRatio(dsel[d.id] || 0).toFixed(1) }}</span>
+            title="你的面板战力 ÷ 首领参考战力；已包含首领倍率与抗性，随机技能和流派克制以实战为准"
+          >首领比 ×{{ recRatio(dsel[d.id] || 0).toFixed(1) }}</span>
           <button class="btn btn-sm flex-1" :disabled="attempts(d.id).used >= attempts(d.id).max" @click="g.enterDungeon(d.id, dsel[d.id] || 0)">挑 战</button>
           <button
             class="btn btn-sm"
@@ -44,7 +44,7 @@
     <div class="panel md:col-span-2 flex justify-between items-center gap-2 flex-wrap">
       <div>
         <b class="gold">问 道 长 阶</b>
-        <span class="text-xs dim ml-2">主线关卡已独立成页 · 已通关 {{ g.stage.cleared }} 阶</span>
+        <span class="text-xs dim ml-2">已通关 {{ g.stage.cleared }} 阶</span>
       </div>
       <button class="btn btn-sm btn-gold" @click="g.tab = 'stage'">进入长阶 →</button>
     </div>
@@ -100,10 +100,10 @@
         <div class="flex justify-between items-center">
           <b class="gold">仙武论道台</b><span class="chip">天梯 PVP</span>
         </div>
-        <div class="text-xs dim mt-1">寻道大千式排名赛：赢升名次、输掉名次，需消耗「论道帖」（挖灵脉有概率获得）。完整榜单在「仙缘」页。</div>
+        <div class="text-xs dim mt-1">寻道大千式排名赛：赢升名次、输掉名次，需消耗「论道帖」（摇落宝树有概率获得）。完整榜单在「仙缘」页。</div>
         <div class="text-xs jade mt-1">论道帖 <b class="gold">{{ g.res.pvpTicket }}</b> 张 · 当前 {{ PVP_TIERS[pvpTierIdx(g.pvp.points)].n }}段（第 {{ pvpRank(g.pvp.points) }} 名）</div>
         <button class="btn btn-sm mt-2 w-full" :disabled="g.res.pvpTicket < 1" @click="g.pvpMatch()">
-          {{ g.res.pvpTicket < 1 ? '论道帖不足（去挖灵脉）' : '匹配对战（论道帖×1）' }}
+          {{ g.res.pvpTicket < 1 ? '论道帖不足（去摇宝树）' : '匹配对战（论道帖×1）' }}
         </button>
       </div>
       <div class="panel">
@@ -146,7 +146,9 @@
 import { computed, reactive } from 'vue'
 import { useGame } from '../stores/game'
 import { DUNGEONS, DIFFS } from '../data/world'
-import { baseAtk, baseDef, baseHp } from '../data/realms'
+import { enemyReferenceStats } from '../core/battle'
+import { calcPower } from '../core/equip'
+import { resetIn as gameResetIn } from '../core/time'
 import { PVP_TIERS, pvpRank, pvpTierIdx } from '../data/meta'
 import { TOWER_BUFF_MAP } from '../data/towerbuffs'
 import { fmt, fmtTime } from '../core/format'
@@ -175,7 +177,7 @@ const buffChips = computed<BuffChip[]>(() => {
 function recRatio(diffIdx: number): number {
   const df = DIFFS[diffIdx]
   const lv = Math.max(0, g.lv + df.lvOff)
-  const enemy = (baseAtk(lv) * 10 + baseDef(lv) * 6 + baseHp(lv) * 0.9) * df.mult
+  const enemy = calcPower(enemyReferenceStats(lv, df.mult * 1.4, true), 0)
   return g.derived.power / Math.max(1, enemy)
 }
 
@@ -185,11 +187,7 @@ function weeklyDungeon(id: string) { return DUNGEONS.find(d => d.id === id) || n
 
 function attempts(id: string) { return g.dailyAttempts(id) }
 
-const DAY = 86400000
-const WEEK = DAY * 3
 function resetIn(d: { weekly?: number; daily?: number }): number {
-  const now = Date.now()
-  if (d.weekly) return WEEK - (now % WEEK)
-  return DAY - (now % DAY)
+  return gameResetIn(Date.now(), d.weekly ? 3 : 1)
 }
 </script>

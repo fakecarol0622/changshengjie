@@ -18,6 +18,8 @@ interface SideState {
   reviveLeft: number
   lowHpTriggered: boolean
   firstHitDone: boolean
+  immuneCharges: number
+  usedProcs: Set<string>
 }
 
 function mkSide(c: Combatant): SideState {
@@ -25,6 +27,7 @@ function mkSide(c: Combatant): SideState {
   const st: SideState = {
     c, s, hp: s.hp, shield: 0, stun: 0, buffAtk: [], dot: [],
     defDown: 0, defDownRounds: 0, reviveLeft: s.reviveCount, lowHpTriggered: false, firstHitDone: false,
+    immuneCharges: 0, usedProcs: new Set(),
   }
   if (s.startShieldPct > 0) {
     st.shield = Math.round(s.hp * s.startShieldPct / 100 * (1 + s.shield / 100))
@@ -36,6 +39,15 @@ function atkOf(st: SideState): number {
   let a = st.s.atk
   for (const b of st.buffAtk) a *= 1 + b.pct / 100
   return a
+}
+
+// 普通攻击、普通技能与持续伤害共用防御/破甲/减伤/增伤口径。
+function normalDamage(src: SideState, dst: SideState, raw: number): number {
+  let def = dst.s.def * Math.max(0.2, 1 - Math.max(0, src.s.armorPen) / 200)
+  def *= 1 - Math.min(1, Math.max(0, src.s.ignoreDefP) / 100)
+  if (dst.defDownRounds > 0) def *= 1 - Math.min(1, dst.defDown / 100)
+  const mitig = Math.min(0.75, def / (def + atkOf(src) * 2.2 + 80))
+  return Math.max(1, Math.round(raw * (1 - mitig) * (1 - Math.min(0.8, dst.s.dmgReduce / 100)) * (1 + (src.s.dmgP + src.s.dmgBoost) / 100)))
 }
 
 // 治疗效果系数：己方强化治疗 × 敌方弱化治疗
@@ -53,15 +65,20 @@ function scaleEff(eff: Eff, f: number): Eff {
 }
 
 function applyEff(src: SideState, dst: SideState, eff: Eff, log: LogLine[], procName: string) {
+  if (['stun', 'dot', 'defDown'].includes(eff.t) && dst.immuneCharges > 0) {
+    dst.immuneCharges--
+    log.push({ t: `  ${dst.c.name} 免疫了${procName}的负面效果`, c: 'l-proc' })
+    return
+  }
   switch (eff.t) {
     case 'dmg': {
-      const dmg = Math.round(atkOf(src) * eff.mult)
+      const dmg = normalDamage(src, dst, atkOf(src) * eff.mult)
       hitDirect(dst, dmg, log)
       log.push({ t: `  ${procName}：造成 ${fmt(dmg)} 伤害`, c: 'l-proc' })
       break
     }
     case 'true': {
-      const dmg = Math.round(atkOf(src) * eff.mult)
+      const dmg = Math.round(atkOf(src) * eff.mult * (1 + (src.s.dmgP + src.s.dmgBoost) / 100))
       hitDirect(dst, dmg, log, true)
       log.push({ t: `  ${procName}：真实伤害 ${fmt(dmg)}`, c: 'l-crit' })
       break
@@ -97,7 +114,7 @@ function applyEff(src: SideState, dst: SideState, eff: Eff, log: LogLine[], proc
       break
     }
     case 'dot': {
-      const amt = Math.round(atkOf(src) * eff.pct)
+      const amt = normalDamage(src, dst, atkOf(src) * eff.pct)
       dst.dot.push({ pct: 0, rounds: eff.rounds, name: eff.name, from: amt })
       log.push({ t: `  ${procName}：${eff.name}缠身（${eff.rounds}回合，每回合${fmt(amt)}）`, c: 'l-proc' })
       break
@@ -124,6 +141,7 @@ function applyEff(src: SideState, dst: SideState, eff: Eff, log: LogLine[], proc
       break
     }
     case 'immune': {
+      src.immuneCharges++
       log.push({ t: `  ${procName}：万法不侵`, c: 'l-proc' })
       break
     }
@@ -134,7 +152,7 @@ function applyEff(src: SideState, dst: SideState, eff: Eff, log: LogLine[], proc
       break
     }
     case 'extraHit': {
-      const dmg = Math.round(atkOf(src) * eff.mult)
+      const dmg = normalDamage(src, dst, atkOf(src) * eff.mult)
       hitDirect(dst, dmg, log)
       log.push({ t: `  ${procName}：追伤 ${fmt(dmg)}`, c: 'l-proc' })
       break
@@ -167,12 +185,15 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
   const A = mkSide(a)
   const B = mkSide(b)
   const maxR = opts.maxRounds ?? 40
+  const boss = opts.boss ?? !!b.isBoss
   log.push({ t: `【${a.name}】 对阵 【${b.name}】`, c: 'l-sys' })
 
   const runProcs = (st: SideState, enemy: SideState, trigger: Proc['trigger']) => {
     for (const p of st.c.procs) {
+      if (st.hp <= 0) break
       if (p.trigger !== trigger) continue
-      if (p.bossOnly && !opts.boss) continue
+      if (p.once && st.usedProcs.has(p.id)) continue
+      if (p.bossOnly && !boss) continue
       let eff = p.eff
       let ch = Math.min(1, p.chance * (1 + st.s.cdr / 100))
       if (p.src === 'pet') {
@@ -184,6 +205,7 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
       if (trigger !== 'start' && trigger !== 'round' && !chance(ch)) continue
       if (trigger === 'round' && !chance(ch)) continue
       if (trigger === 'start' && !chance(ch)) continue
+      if (p.once) st.usedProcs.add(p.id)
       applyEff(st, enemy, eff, log, `「${p.name}」`)
     }
   }
@@ -215,24 +237,14 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
     let tag = ''
     if (def.hp / def.s.hp < 0.35 && atk.s.execute > 0) { dmg *= 1 + atk.s.execute / 100; tag += '·斩杀' }
     if (def.hp / def.s.hp < 0.3 && atk.s.vsLowP > 0) dmg *= 1 + atk.s.vsLowP / 100
-    if (opts.boss && atk.s.vsBossP > 0 && def.c.name === b.name) dmg *= 1 + atk.s.vsBossP / 100
-    // 防御减伤
-    let defEff = def.s.def
-    if (atk.s.armorPen > 0) defEff *= Math.max(0.2, 1 - atk.s.armorPen / 200)
-    if (atk.s.ignoreDefP > 0) defEff *= 1 - atk.s.ignoreDefP / 100
-    if (def.defDownRounds > 0) defEff *= 1 - def.defDown / 100
-    const mitig = Math.min(0.75, defEff / (defEff + atkOf(atk) * 2.2 + 80))
-    dmg *= 1 - mitig
-    // 伤害减免
-    dmg *= 1 - Math.min(0.8, def.s.dmgReduce / 100)
-    dmg *= 1 + (atk.s.dmgP + (atk.s.dmgBoost || 0)) / 100
+    if (boss && atk.s.vsBossP > 0 && def === B) dmg *= 1 + atk.s.vsBossP / 100
     // 完全免疫
     if (def.s.immuneChance > 0 && chance(def.s.immuneChance / 100)) {
       log.push({ t: `「龟息·御」${def.c.name} 完全免疫了这次伤害`, c: 'l-proc' })
       return true
     }
     const isTrue = isCrit && atk.s.critTrue > 0 && chance(atk.s.critTrue / 100)
-    const final = Math.max(1, Math.round(dmg))
+    const final = isTrue ? Math.max(1, Math.round(dmg * (1 + (atk.s.dmgP + atk.s.dmgBoost) / 100))) : normalDamage(atk, def, dmg)
     hitDirect(def, final, log, isTrue)
     log.push({
       t: `${atk.c.name} 出手${combo ? '（连击！）' : ''}，对 ${def.c.name} 造成 ${fmt(final)} 伤害${isCrit ? '（暴击！）' : ''}${tag}${isTrue ? '（真实伤害）' : ''}`,
@@ -272,7 +284,7 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
     runProcs(atk, def, 'attack')
     runProcs(def, atk, 'hit')
     // 反击（受击者反击；反击不连锁触发反击/击晕）
-    if (!nested && def.hp > 0) {
+    if (!nested && def.hp > 0 && atk.hp > 0) {
       const effCounter = Math.max(0, def.s.counter - atk.s.resistCounter)
       if (effCounter > 0 && chance(Math.min(0.45, effCounter / 100))) {
         log.push({ t: `${def.c.name} 拨开来势，趁隙反击！`, c: 'l-proc' })
@@ -280,7 +292,7 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
       }
     }
     // 击晕（受抗击晕抵消；仅主动出击可震慑）
-    if (!nested && def.hp > 0) {
+    if (!nested && def.hp > 0 && atk.hp > 0) {
       const effStun = Math.max(0, atk.s.stun - def.s.resistStun)
       if (effStun > 0 && chance(Math.min(0.45, effStun / 100))) {
         def.stun = Math.max(def.stun, 1)
@@ -304,8 +316,17 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
 
   let round = 1
   let winner: 'a' | 'b' | 'draw' = 'draw'
+  const resolveDeaths = (): boolean => {
+    const aDead = checkDeath(A)
+    const bDead = checkDeath(B)
+    if (!aDead && !bDead) return false
+    winner = aDead && bDead ? 'draw' : aDead ? 'b' : 'a'
+    log.push({ t: aDead && bDead ? '双方气血同时归零，此战同归于尽。' : `${aDead ? a.name : b.name} 气血归零，${aDead ? b.name : a.name} 获胜！`, c: 'l-bad' })
+    return true
+  }
+  const endedAtStart = resolveDeaths()
   const aFirst = A.s.spd + rf(-1, 1) >= B.s.spd
-  outer: for (round = 1; round <= maxR; round++) {
+  outer: for (round = 1; !endedAtStart && round <= maxR; round++) {
     log.push({ t: `—— 第 ${round} 回合 ——`, c: 'l-sys' })
     const order = aFirst ? [A, B] : [B, A]
     for (const st of order) {
@@ -317,8 +338,19 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
         continue
       }
       hit(st, enemy)
-      if (hit === null) break
-      if (checkDeath(enemy)) {
+      const enemyDead = checkDeath(enemy)
+      const selfDead = checkDeath(st)
+      if (enemyDead && selfDead) {
+        winner = 'draw'
+        log.push({ t: '双方气血同时归零，此战同归于尽。', c: 'l-bad' })
+        break outer
+      }
+      if (selfDead) {
+        winner = st === A ? 'b' : 'a'
+        log.push({ t: `${st.c.name} 气血归零，${enemy.c.name} 获胜！`, c: 'l-crit' })
+        break outer
+      }
+      if (enemyDead) {
         winner = st === A ? 'a' : 'b'
         // 击杀特效
         const killer = st
@@ -340,21 +372,21 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
       const enemy = st === A ? B : A
       for (const d of st.dot) {
         if (d.rounds > 0) {
-          st.hp -= d.from
+          hitDirect(st, d.from, log)
           log.push({ t: `${st.c.name} 受到${d.name}侵蚀 ${fmt(d.from)} 伤害`, c: 'l-bad' })
           d.rounds--
         }
       }
       st.dot = st.dot.filter(d => d.rounds > 0)
-      if (st.s.regenPct > 0) {
+      if (st.hp > 0 && st.s.regenPct > 0) {
         const heal = Math.round(st.s.hp * st.s.regenPct / 100 * healFactor(st, enemy))
         if (st.hp < st.s.hp) {
           st.hp = Math.min(st.s.hp, st.hp + heal)
           log.push({ t: `${st.c.name} 生生不息，回复 ${fmt(heal)} 气血`, c: 'l-heal' })
         }
       }
-      if (st.s.qiRegen > 0) {
-        const heal = Math.round(st.s.hp * st.s.qiRegen * 0.004)
+      if (st.hp > 0 && st.s.qiRegen > 0) {
+        const heal = Math.round(st.s.hp * st.s.qiRegen * 0.004 * healFactor(st, enemy))
         if (st.hp < st.s.hp) st.hp = Math.min(st.s.hp, st.hp + heal)
       }
       st.buffAtk = st.buffAtk.filter(b => --b.rounds > 0)
@@ -364,18 +396,13 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
         st.lowHpTriggered = true
         runProcs(st, enemy, 'lowhp')
       }
-      checkDeath(st)
-      if (st.hp <= 0) {
-        winner = st === A ? 'b' : 'a'
-        break outer
-      }
     }
+    if (resolveDeaths()) break
     runProcs(A, B, 'round')
     runProcs(B, A, 'round')
-    if (checkDeath(A)) { winner = 'b'; break }
-    if (checkDeath(B)) { winner = 'a'; break }
+    if (resolveDeaths()) break
   }
-  if (winner === 'draw') log.push({ t: '大战三百回合，未分胜负……', c: 'l-sys' })
+  if (winner === 'draw' && A.hp > 0 && B.hp > 0) log.push({ t: `大战${maxR}回合，未分胜负……`, c: 'l-sys' })
   return {
     log,
     win: winner,
@@ -387,6 +414,17 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
 }
 
 // ===== 敌人构造 =====
+// 不消耗随机数，供界面展示首领参考战力；随机技能与克制仍需以实战为准。
+export function enemyReferenceStats(lv: number, mult: number, boss = false): Stats {
+  return {
+    ...emptyStats(),
+    hp: Math.round(baseHp(lv) * mult * (boss ? 2.4 : 1)),
+    atk: Math.round(baseAtk(lv) * mult * (boss ? 1.35 : 1) * 1.025),
+    def: Math.round(baseDef(lv) * mult * 1.025),
+    spd: 10 + lv * 0.4, crit: 8 + lv * 0.15, dmgReduce: 5 + lv * 0.1,
+    ...(boss ? { resistStun: 15, resistCrit: 8, resistCombo: 8, resistCounter: 5, resistLifesteal: 10 } : {}),
+  }
+}
 export function makeEnemy(lv: number, mult: number, name: string, opts: { boss?: boolean; proc?: boolean } = {}): Combatant {
   const s = emptyStats()
   const boss = !!opts.boss
@@ -412,7 +450,7 @@ export function makeEnemy(lv: number, mult: number, name: string, opts: { boss?:
   }
   // BOSS 自带妖兽技能（受玩家「弱化灵兽」克制）
   if (boss) procs.push({ id: 'e_pet', name: '妖兽扑咬', trigger: 'attack', chance: 0.22, desc: '妖兽张牙扑来', eff: { t: 'extraHit', mult: 0.5 }, src: 'pet' })
-  return { name, stats: s, procs, hp: s.hp }
+  return { name, stats: s, procs, hp: s.hp, isBoss: boss }
 }
 
 // 由 NPC 构造战斗对象

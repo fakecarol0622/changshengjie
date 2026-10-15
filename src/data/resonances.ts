@@ -152,21 +152,21 @@ export const RESONANCES: ResDef[] = [
     apply: s => { s.reviveCount += 2; s.revivePct = Math.max(s.revivePct, 50) },
   },
   {
-    id: 'tiandao_qin', name: '天道·勤', cls: 'E', req: '全身装备皆为自挖且未洗练',
-    desc: '全属性+30%，挖掘出货率+15%',
+    id: 'tiandao_qin', name: '天道·勤', cls: 'E', req: '全身装备皆为摇得且未洗练',
+    desc: '全属性+30%，摇落出货率+15%',
     check: c => c.equipped.length >= 6 && c.equipped.every(e => e.selfMined && !e.enchanted),
     apply: s => { mul(s, 1.3); s.dropLuck += 15 },
   },
   {
     id: 'sanxiu_hun', name: '散修·魂', cls: 'E', req: '全身品质≤地品(4) 且星级≥4',
-    desc: '全属性+35%，挖掘必出高星',
+    desc: '全属性+35%，摇落必出高星',
     check: c => c.equipped.length >= 1 && c.equipped.every(e => e.q <= 4 && e.stars >= 4),
     apply: s => { mul(s, 1.35); s.starFloor = Math.max(s.starFloor, 4) },
   },
   {
-    id: 'wanfa', name: '万法·一', cls: 'E', req: '6件不同顶级词条',
+    id: 'wanfa', name: '万法·一', cls: 'E', req: '集齐5种顶级词条',
     desc: '万法归一，全属性+40%',
-    check: c => c.distinctTop >= 6,
+    check: c => c.distinctTop >= 5,
     apply: s => mul(s, 1.4),
   },
   {
@@ -187,7 +187,7 @@ export const RESONANCES: ResDef[] = [
   },
   {
     id: 'zong_dan', name: '丹道·恒', cls: '宗', req: '灵气回复≥3 + 丹霞谷',
-    desc: '每回合回5%，丹药效果+30%',
+    desc: '每回合回3%，丹药效果+30%',
     check: c => c.sect === '丹霞谷' && (c.cnt['qiRegen'] || 0) >= 3,
     apply: s => { s.regenPct += 3; s.pillBonus += 30 },
   },

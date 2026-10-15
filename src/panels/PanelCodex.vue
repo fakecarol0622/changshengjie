@@ -77,7 +77,7 @@
     <!-- 装备图鉴 -->
     <template v-else-if="tab === 'item'">
       <div class="panel text-xs dim">
-        共收录 {{ Object.keys(g.codex.items).length }} 件装备 · 历史最高评分 {{ fmt(g.codex.bestScore) }} · 挖掘 {{ g.codex.pulls }} 次 · 转世 {{ g.codex.deaths }} 次
+        共收录 {{ Object.keys(g.codex.items).length }} 件装备 · 历史最高评分 {{ fmt(g.codex.bestScore) }} · 摇落 {{ g.codex.pulls }} 次 · 转世 {{ g.codex.deaths }} 次
       </div>
       <div v-if="compare.length" class="panel">
         <div class="panel-t">装 备 对 比</div>
@@ -124,12 +124,12 @@
       <div class="text-xs dim2">已获得 {{ g.titles.owned.length }} / {{ TITLES.length }} 个称号</div>
     </template>
 
-    <!-- 烛龙脉 -->
+    <!-- 太初宝树 -->
     <template v-else>
       <div class="panel">
-        <div class="text-xs dim mb-2">烛龙脉：一脉贯地，逐级疏通。每级提升出货率、品质区间与开脉石产出；<b class="gold">每级需先在本境挖掘一定次数</b>方可疏通，后期所需灵石与时间渐增，可用「龙髓」加速（挖掘/宝箱/坊市/长阶可得）。<b class="jade">挖出的装备等级随主角境界（当前 Lv.{{ eqRange.min }}~{{ eqRange.max }}）</b>，与龙脉等级无关。</div>
+        <div class="text-xs dim mb-2">太初宝树：根须扎在烛龙脉上，摇落得宝。每重提升出货率、品质区间与灵露产出；<b class="gold">每重需先在本重摇落一定次数</b>方可培育，后期所需灵石与时间渐增，可用「龙髓」加速（摇落/宝箱/坊市/长阶可得）。<b class="jade">摇出的装备等级随主角境界（当前 Lv.{{ eqRange.min }}~{{ eqRange.max }}）</b>，与宝树重数无关。</div>
         <table class="tbl">
-          <thead><tr><th>等级</th><th>阶</th><th>品质区间</th><th>出货率</th><th>开脉石</th><th>需挖掘</th><th>疏通消耗</th><th>耗时</th></tr></thead>
+          <thead><tr><th>重</th><th>段</th><th>品质区间</th><th>出货率</th><th>灵露</th><th>需摇落</th><th>培育消耗</th><th>耗时</th></tr></thead>
           <tbody>
             <tr v-for="row in veinRows" :key="row.lv" :class="row.lv === g.vein.lv ? 'gold' : ''">
               <td>{{ row.lv }}{{ row.lv === g.vein.lv ? '（当前）' : '' }}</td>
@@ -175,7 +175,7 @@ const veinRows = computed(() => {
 })
 const tabs = [
   { id: 'quality', n: '品质图鉴' }, { id: 'prefix', n: '前缀图鉴' }, { id: 'res', n: '共鸣图鉴' },
-  { id: 'affix', n: '词条图鉴' }, { id: 'item', n: '装备图鉴' }, { id: 'vein', n: '灵脉图鉴' }, { id: 'title', n: '称号' },
+  { id: 'affix', n: '词条图鉴' }, { id: 'item', n: '装备图鉴' }, { id: 'vein', n: '宝树图鉴' }, { id: 'title', n: '称号' },
 ]
 const tab = ref('quality')
 const owned = (id: string) => g.titles.owned.includes(id)

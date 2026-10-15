@@ -1,4 +1,4 @@
-// ===== 境界 / 数值公式 / 烛龙脉 =====
+// ===== 境界 / 数值公式 / 宝树 =====
 import { rnd } from '../core/rng'
 
 export const MAJOR = ['凡人', '炼气', '筑基', '金丹', '元婴', '化神', '炼虚', '合体', '大乘', '渡劫', '仙人']
@@ -22,12 +22,13 @@ export function realmShort(major: number, phase: number, minor: number): string 
 }
 
 // —— 数值公式 ——
-// 长线平衡（第19批重定）：440 级标尺（11 境 × 4 小境 × 10 阶），曲线指数按 ⁴√ 收拢，
-// 保证同一相对进度所需修为与第18批等价（单阶需求不缩水，只是台阶更密）
+// 长线平衡（第31批：慢放为长期游戏）：单阶耗时前缀分钟级、中段小时级、终局以「天」计，
+// 总进程以月计（基线档含突破失败期望约 100 天；配置更优的强号约 2 个月）。
+// seg 按大境界：凡人~筑基 1 / 金丹~炼虚 1.28 / 合体~渡劫 1.58 / 仙人 1.9
 export function cultReq(lv: number): number {
   const major = Math.floor(lv / PER_REALM)
-  const seg = major <= 2 ? 1 : major <= 5 ? 1.15 : major <= 8 ? 1.35 : 1.6
-  return Math.round(150 * Math.pow(1.03443, lv) * seg)
+  const seg = major <= 2 ? 1 : major <= 5 ? 1.28 : major <= 8 ? 1.58 : 1.9
+  return Math.round(150 * Math.pow(1.0385, lv) * seg)
 }
 export function baseHp(lv: number): number {
   return Math.round(120 * Math.pow(1.04225, lv))
@@ -48,43 +49,46 @@ export function idleLingmai(lv: number, mult: number): number {
   return 0.04 * Math.pow(1.01515, lv) * mult
 }
 
-// —— 烛龙脉：一脉贯地，逐级疏通（时间+灵石升级，龙髓可加速）——
-export const VEIN_NAME = '烛龙脉'
-export const VEIN_FLAVOR = '沉眠地底的远古龙脉，疏其经络，天地灵气皆循此脉而来'
+// —— 太初宝树：根扎龙脉，摇落得宝（时间+灵石培育，龙髓可加速）——
+export const VEIN_NAME = '太初宝树'
+export const VEIN_FLAVOR = '根须扎在烛龙的脉上，一摇一落，皆是从它梦里取来的宝物'
 export const VEIN_MAX = 66
 export const VEIN_TIERS: { from: number; n: string }[] = [
-  { from: 1, n: '凡脉' },
-  { from: 10, n: '灵脉' },
-  { from: 18, n: '玄脉' },
-  { from: 26, n: '宝脉' },
-  { from: 34, n: '仙脉' },
-  { from: 44, n: '神脉' },
-  { from: 54, n: '祖龙脉' },
+  { from: 1, n: '嫩芽' },
+  { from: 10, n: '幼苗' },
+  { from: 18, n: '青枝' },
+  { from: 26, n: '华盖' },
+  { from: 34, n: '参天' },
+  { from: 44, n: '擎天' },
+  { from: 54, n: '通天' },
 ]
 export function veinTier(lv: number): string {
   let n = VEIN_TIERS[0].n
   for (const t of VEIN_TIERS) if (lv >= t.from) n = t.n
   return n
 }
-// 当前等级可挖出的品质区间（随龙脉等级）
+// 当前等级可摇出的品质区间（随宝树重数）
 export function veinQRange(lv: number): { min: number; max: number } {
   const qmax = Math.min(16, 2 + Math.floor(lv / 4))
   const qmin = Math.max(1, qmax - 5 + Math.floor(lv / 15))
   return { min: Math.min(qmin, qmax), max: qmax }
 }
-// 每级加成：挖掘出货率 +0.6%/级
+// 每重加成：摇落出货率 +0.6%/重
 export function veinLuck(lv: number): number { return Math.round(lv * 0.6 * 10) / 10 }
-// 每级加成：开脉石收益 +1.5%/级
+// 每重加成：灵露收益 +1.5%/重
 export function veinLingmaiP(lv: number): number { return Math.round(lv * 1.5 * 10) / 10 }
-// 单次挖掘消耗开脉石（随龙脉加深，是开脉石的主要去处，挖掘本身不再产出开脉石）
+// 单次摇落消耗灵露（随宝树加深，是灵露的主要去处，摇落本身不再产出灵露）
 export function veinDigCost(lv: number): number { return Math.round(1 + lv * lv / 25 + lv * 0.4) }
-// 疏通消耗（灵石）与耗时（毫秒）——后期渐增（1.30^lv，卡点保留但更友好）
-export function veinUpCost(lv: number): number { return Math.round(1000 * Math.pow(1.3, lv)) }
-export function veinUpTime(lv: number): number { return Math.round(25000 * Math.pow(1.16, lv)) }
-// 每级疏通前需先在本境完成的挖掘次数（先开采后疏通）
+// 培育消耗与耗时平滑增长，单次等待最多12小时。
+export function veinUpCost(lv: number): number { return Math.round(1300 * Math.pow(1.16, lv - 1)) }
+export function veinUpTime(lv: number): number { return Math.round(Math.min(12 * 3600000, 25000 * Math.pow(1.12, lv))) }
+// 满品质后的成长目标：摇落星级保底，数值在装备生成前应用。
+export function veinStarFloor(lv: number): number { return lv >= 66 ? 4 : lv >= 61 ? 3 : lv >= 56 ? 2 : 1 }
+export function veinAcceleration(remainingMs: number): number { return Math.min(remainingMs, Math.max(600000, Math.ceil(remainingMs * 0.2))) }
+// 每重培育前需先在本重完成的摇落次数（先摇落后培育）
 export function veinDigReq(lv: number): number { return 5 + Math.ceil(lv * 0.8) }
 
-// 品质概率衰减系数：区间内偏向低品（底部常见、顶部稀有）；龙脉越深衰减越弱
+// 品质概率衰减系数：区间内偏向低品（底部常见、顶部稀有）；宝树越深衰减越弱
 export function veinFalloff(lv: number): number {
   return Math.min(0.9, 0.52 + lv * 0.004)
 }
@@ -102,7 +106,7 @@ export function mineEquipLevel(playerLv: number, luck = 0): number {
   return Math.max(1, Math.min(EQ_LV_MAX, Math.round(r.min + t * (r.max - r.min))))
 }
 
-// 当前龙脉等级的各品质概率（用于界面展示，与实际掉落一致，出货率参与计算）
+// 当前宝树重数的各品质概率（用于界面展示，与实际掉落一致，出货率参与计算）
 export function veinQualityDist(lv: number, luck = 0): { q: number; pct: number }[] {
   const r = veinQRange(lv)
   const falloff = veinFalloff(lv)
@@ -117,14 +121,13 @@ export function veinQualityDist(lv: number, luck = 0): { q: number; pct: number 
   return arr.map(i => ({ q: i.q, pct: Math.round((i.w / sum) * 1000) / 10 }))
 }
 
-// 突破基础成功率（平滑长线：开局最高，随总进度指数衰减，越往后越低）
-// 基础值 0.85 → 0.85*0.996^lv：lv0≈85%，lv120≈53%，lv240≈33%，lv360≈20%，lv439≈15%
-// 悟性/道心/丹药/秘宝可补足；每小境界前三阶更易、新手期有庇佑；封顶 92%
+// 所有进阶（大小境界一视同仁）都按突破率一搏；随总进度平滑衰减，
+// 悟性上限10个百分点，道心递减收益、上限16个百分点；丹药与失败补偿另计，最终10%～92%。
 export function breakChance(major: number, phase: number, minor: number, wuXing: number, daoXin: number, yeLi: number, jieQi: number, bonus: number): number {
   const lv = major * PER_REALM + phase * MINOR_PER + minor
-  const base = 0.85 * Math.pow(0.996, lv)
-  let p = base + wuXing * 0.005 + daoXin * 0.008 + bonus * 0.01 - yeLi * 0.002 - jieQi * 0.0012
-  if (minor < 3) p += 0.12 // 每小境界前三阶更易
-  if (major <= 1) p += 0.1 // 新手期庇佑
-  return Math.max(0.05, Math.min(0.92, p))
+  const base = 0.9 * Math.pow(0.9982, lv)
+  const insight = Math.min(0.1, Math.max(0, wuXing) * 0.005)
+  const resolve = 0.16 * (1 - Math.exp(-Math.max(0, daoXin) / 20))
+  const p = base + insight + resolve + bonus * 0.01 - yeLi * 0.002 - jieQi * 0.0012
+  return Math.max(0.1, Math.min(0.92, p))
 }

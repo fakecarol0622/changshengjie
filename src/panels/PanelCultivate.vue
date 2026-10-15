@@ -1,7 +1,8 @@
 <template>
   <div class="flex flex-col gap-3">
     <!-- 角色总览：境界 / 命格 / 属性 / 战力 -->
-    <div class="panel">
+    <div class="panel cultivation-hero">
+      <div class="hero-eyebrow">听脉修行 <span>第 {{ g.reinc.count + 1 }} 世 · {{ g.sectName }}</span></div>
       <div class="flex items-start justify-between flex-wrap gap-2">
         <div class="min-w-0">
           <div class="text-xl gold">{{ g.realmText }}
@@ -9,7 +10,7 @@
             <span v-if="g.clones.active !== 'main'" class="chip chip-gold text-[10px] align-middle ml-1">出战·{{ g.activeBodyName }}</span>
           </div>
           <div class="text-xs dim">
-            姓名 <b>{{ g.realName || '未取名' }}</b> · 道号 <b class="gold">{{ g.name }}</b>
+            姓名 <b>{{ g.realName || '未取名' }}</b> · 道号 <b class="gold">{{ g.name }}</b> · {{ g.gender }}修
           </div>
           <div class="text-xs dim">
             灵根：<b :style="{ color: g.rootColor }">{{ g.root.n }}</b>（×{{ g.root.mult }}）
@@ -34,17 +35,25 @@
         <span>修为 {{ fmt(g.cultivation) }} / {{ fmt(g.nextReq) }}</span>
         <span>+{{ fmt1(g.cultPerSec) }} / 秒{{ g.injured > 0 ? '（受伤 -30%）' : '' }}</span>
       </div>
-      <div class="flex gap-2 mt-2">
-        <button class="btn btn-gold flex-1" :disabled="g.cultivation < g.nextReq" @click="g.tryBreakthrough()">
-          {{ g.cultivation >= g.nextReq ? '尝 试 突 破' : '修为未满' }}
-        </button>
-        <button class="btn" @click="g.meditate()">{{ g.meditateUntil > 0 ? '打坐中…' : '打坐冥想' }}</button>
+      <div class="cultivation-status text-sm">
+        <span class="jade">{{ cultivationStatus }}</span>
       </div>
-      <div class="text-xs dim mt-1">
-        突破成功率约 <b class="gold">{{ Math.round(g.breakChanceBase * 100) }}%</b>（大境界将触发雷劫抉择）；
-        持有破障丹将自动服下提升成功率
+      <div class="flex gap-2 mt-2">
+        <button class="btn btn-gold flex-1" :disabled="g.cultivation < g.nextReq || g.lv >= LV_MAX" @click="g.tryBreakthrough()">
+          {{ g.lv >= LV_MAX ? '境界圆满' : g.majorBreakReady ? '准备大境界突破' : g.cultivation >= g.nextReq ? '立即进阶' : '吐纳积累中' }}
+        </button>
+        <button class="btn" :disabled="g.meditateUntil > 0 || g.daily.meditations >= MEDITATE_MAX" :title="`静心30秒，得灵石×${fmt(g.meditateReward.ls)}、灵露×${g.meditateReward.lm}、仙玉×${g.meditateReward.xy}；每日${MEDITATE_MAX}次`" @click="g.meditate()">{{ g.meditateUntil > 0 ? '打坐中…' : `打坐 ${g.daily.meditations}/${MEDITATE_MAX}` }}</button>
+      </div>
+      <div class="text-xs dim mt-2 leading-relaxed">
+        <div>
+          突破率 <b class="gold">{{ Math.round(g.breakChanceBase * 100) }}%</b> · 修为储存 {{ fmt(g.cultivation) }} / {{ fmt(g.cultivationCap) }}
+          <button class="info-dot" type="button" aria-label="突破与修为说明" @click="g.pushModal('text', { title: '突破与修为', body: BREAK_INFO })">!</button>
+        </div>
+        <div>打坐奖励：<b class="gold">{{ fmt(g.meditateReward.ls) }}灵石 · {{ g.meditateReward.xy }}仙玉</b>，另得{{ g.meditateReward.lm }}灵露，每日{{ MEDITATE_MAX }}次。</div>
       </div>
 
+      <details class="attribute-details">
+      <summary>道基与战斗属性 <span class="dim2">查看详细数值</span></summary>
       <div class="divider"></div>
       <div class="text-xs dim mb-1">道 基 属 性 <span class="dim2">（悬停/点按查看作用）</span></div>
       <div class="grid grid-cols-3 sm:grid-cols-6 gap-y-1 text-xs">
@@ -58,6 +67,7 @@
       <div class="grid grid-cols-3 sm:grid-cols-4 gap-y-1 text-xs">
         <div v-for="(v, k) in statList" :key="k">{{ k }} <b class="gold">{{ v }}</b></div>
       </div>
+      </details>
       <div v-if="activeRes.length" class="mt-2">
         <div class="text-xs dim mb-1 flex items-center justify-between">
           <span>已激活共鸣 · {{ activeRes.length }} 条</span>
@@ -79,12 +89,13 @@
     </div>
 
     <!-- 问道长阶 · 入口 -->
-    <div class="panel cursor-pointer" @click="props.go?.('stage')">
+    <div class="panel stage-entry">
+      <div class="text-xs jade mb-2">{{ nextGoal }}</div>
       <div class="flex justify-between items-center flex-wrap gap-2">
         <div class="min-w-0">
           <b class="gold">问 道 长 阶 · {{ segInfo.n }}</b>
           <span class="text-xs dim ml-2">已通关 {{ g.stage.cleared }}/{{ STAGE_MAX }} 阶 · 悟道加成 全属性+{{ stageBonus(g.stage.cleared) }}%</span>
-          <div class="text-xs dim mt-1">下一关：第 {{ nextStageN }} 阶 · {{ nextEnemyInfo.name }}{{ nextEnemyInfo.boss ? '（守关BOSS）' : '' }} · 首通：{{ rewardBrief(stageRewards(nextStageN)) }}</div>
+          <div class="text-xs dim mt-1">{{ g.stage.cleared >= STAGE_MAX ? '长阶已尽，回望仙途纪事，作出你的抉择。' : `下一关：第 ${nextStageN} 阶 · ${nextEnemyInfo.name}${nextEnemyInfo.boss ? '（守关BOSS）' : ''} · 首通：${rewardBrief(stageRewards(nextStageN))}` }}</div>
         </div>
         <button class="btn btn-sm btn-gold shrink-0" @click.stop="props.go?.('stage')">进入长阶 →</button>
       </div>
@@ -94,19 +105,19 @@
     <div class="panel">
       <div class="panel-t">仙 途 福 利 <span class="text-xs dim">每日福利，点开即领</span></div>
       <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="!g.daily.daySigned ? 'btn-gold' : ''" @click="g.pushModal('signin')">
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="!g.daily.daySigned ? 'reward-ready' : ''" @click="g.pushModal('signin')">
           <span class="text-base leading-none">📅</span><span class="text-[11px]">签到</span>
         </button>
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="bundleReady ? 'btn-gold' : ''" @click="g.pushModal('bundle')">
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="bundleReady ? 'reward-ready' : ''" @click="g.pushModal('bundle')">
           <span class="text-base leading-none">🎁</span><span class="text-[11px]">大礼包</span>
         </button>
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="dailyReady ? 'btn-gold' : ''" @click="g.pushModal('daily')">
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="dailyReady ? 'reward-ready' : ''" @click="g.pushModal('daily')">
           <span class="text-base leading-none">📋</span><span class="text-[11px]">日常</span>
         </button>
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="onlineReady ? 'btn-gold' : ''" @click="g.pushModal('online')">
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="onlineReady ? 'reward-ready' : ''" @click="g.pushModal('online')">
           <span class="text-base leading-none">⏳</span><span class="text-[11px]">在线</span>
         </button>
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="isActiveNow ? 'btn-gold' : ''" @click="g.pushModal('activity')">
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="isActiveNow ? 'reward-ready' : ''" @click="g.pushModal('activity')">
           <span class="text-base leading-none">🗓</span><span class="text-[11px]">活动</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="新手目标：达成即领奖励" @click="g.pushModal('goals')">
@@ -131,7 +142,7 @@
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="众生百态：结交修士 / 指点 / 送礼" @click="g.openSocial('npc')">
           <span class="text-base leading-none">👥</span><span class="text-[11px]">众生百态</span>
         </button>
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="storyReady ? 'btn-gold' : ''" @click="g.pushModal('storybook')">
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="storyReady ? 'reward-ready' : ''" @click="g.pushModal('storybook')">
           <span class="text-base leading-none">📖</span><span class="text-[11px]">纪事</span>
         </button>
       </div>
@@ -160,7 +171,8 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
-import { useGame, keyName, DAILY_TASKS, ROLLED_ATTRS } from '../stores/game'
+import { useGame, keyName, DAILY_TASKS, DAILY_CHEST_POINTS, MEDITATE_MAX, ROLLED_ATTRS } from '../stores/game'
+import { LV_MAX } from '../data/realms'
 import { fmt, fmt1, fmtTime, pct } from '../core/format'
 import { modLines } from '../core/mods'
 import { ONLINE_REWARDS, PVP_TIERS, pvpRank, pvpTierIdx } from '../data/meta'
@@ -184,10 +196,13 @@ function traitCls(id: string) {
   return r === 3 ? 'gold' : r === 2 ? 'jade' : 'dim'
 }
 
+// 「突破与修为」说明：长文案收进 ⓘ，点击查看
+const BREAK_INFO = '· 修为攒满后，手动点击按钮发起突破；无论小阶还是大境界，都按突破率一搏。\n· 突破失败：损失本阶 25% 修为、调息 2 分钟；此后每失败一次，下次突破率 +10 个百分点（至多 +30）。\n· 持有破障丹会在突破时自动服下，提升成功率；炼气之后的大境界突破将触发雷劫抉择。\n· 修为可储存至上限（本阶所需 ×10 与 12 小时挂机产出取高者），离线最多结算 12 小时。'
+
 // 入口按钮红点（可领取状态）
 const dailyReady = computed(() =>
   DAILY_TASKS.some((t, i) => !g.daily.taskClaimed[i] && (g.daily.progress[t.k] || 0) >= t.target) ||
-  ((g.daily.progress['pt'] || 0) >= 100 && !g.daily.chestTaken),
+  ((g.daily.progress['pt'] || 0) >= DAILY_CHEST_POINTS && !g.daily.chestTaken),
 )
 const onlineReady = computed(() => ONLINE_REWARDS.some((r, i) => g.online.sec >= r.sec && !g.online.got.includes(i)))
 const bundleReady = computed(() =>
@@ -203,6 +218,17 @@ onUnmounted(() => clearInterval(timer))
 const nextTravelIn = computed(() => Math.max(0, 300000 - (now.value - g.travel.rec)))
 
 const pctCult = computed(() => Math.min(100, (g.cultivation / g.nextReq) * 100))
+const cultivationStatus = computed(() => {
+  if (g.lv >= LV_MAX) return g.cultivation >= g.nextReq ? '修行圆满，静候飞升' : `飞升修为还需 ${fmtTime((g.nextReq - g.cultivation) / g.cultPerSec * 1000)}`
+  if (g.cultivation >= g.nextReq) return g.majorBreakReady ? '修为已足 · 备好法宝与渡劫丹' : '修为已足 · 可继续进阶'
+  return `下次${g.majorBreakReady ? '大境界突破' : '进阶'}约需 ${fmtTime((g.nextReq - g.cultivation) / g.cultPerSec * 1000)}`
+})
+const nextGoal = computed(() => {
+  if (g.stage.cleared >= STAGE_MAX) return '你的仙途 · 重温纪事，探索其他结局'
+  if (g.stage.cleared === 0) return '初入仙途 · 先挑战长阶第一关，踏上听脉之路'
+  if (g.equippedItems.length < 6) return '下一步 · 培育宝树，穿齐六件装备，再登长阶'
+  return '下一步 · 调整配装，推进长阶，解锁新的仙途纪事'
+})
 
 const attrList = computed(() => {
   const a = g.attrs

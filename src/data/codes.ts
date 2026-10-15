@@ -21,7 +21,7 @@ export const REDEEM_CODES: RedeemCode[] = [
     grant: [{ t: 'res', id: 'xianyu', n: 128 }, { t: 'egg', qmin: 6, qmax: 8 }],
   },
   {
-    code: 'LINGMAI999', n: '灵脉久久久',
+    code: 'LINGMAI999', n: '宝树久久久',
     grant: [{ t: 'res', id: 'lingmai', n: 300 }, { t: 'res', id: 'lingshi', n: 50000 }],
   },
   {

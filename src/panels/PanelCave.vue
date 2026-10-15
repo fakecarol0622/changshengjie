@@ -8,7 +8,7 @@
     <template v-if="tab === 'cave'">
       <div class="panel">
         <div class="panel-t">洞 府 · {{ g.cave.level }} 级</div>
-        <p class="text-xs dim mb-2">洞府等级提升灵脉福荫，全设施产出提升。搬迁至灵脉福地可获额外加成。</p>
+        <p class="text-xs dim mb-2">洞府等级提升宝树福荫，全设施产出提升。搬迁至宝树福地可获额外加成。</p>
         <button class="btn btn-sm" :disabled="g.cave.level >= 10" @click="g.upgradeCaveLevel()">
           {{ g.cave.level >= 10 ? '已至最高等级' : `扩建洞府（灵石 ${fmt(2000 * Math.pow(2.4, g.cave.level - 1))}）` }}
         </button>

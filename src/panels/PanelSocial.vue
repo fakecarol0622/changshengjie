@@ -1,8 +1,7 @@
 <template>
   <div class="flex flex-col gap-3">
-    <div class="flex gap-1 flex-wrap">
-      <button v-for="t in tabs" :key="t.id" class="btn btn-sm" :class="tab === t.id ? 'btn-gold' : ''" @click="tab = t.id">{{ t.n }}</button>
-    </div>
+    <!-- 三个独立页面：由首页「仙途万象」分别入口，此处仅作静态标题 -->
+    <div class="panel-t">{{ pageTitle }} <span class="text-xs dim">{{ pageSub }}</span></div>
 
     <!-- 天骄榜 -->
     <template v-if="tab === 'rank'">
@@ -24,14 +23,14 @@
     <!-- 仙武论道台（天梯） -->
     <template v-else-if="tab === 'pvp'">
       <div class="panel">
-        <div class="panel-t">仙 武 论 道 台 <span class="text-xs dim">寻道大千式天梯排名赛</span></div>
+        <div class="panel-t">天 梯 排 位 <span class="text-xs dim">寻道大千式排名赛</span></div>
         <div class="grid grid-cols-4 gap-2 text-center text-sm">
           <div><div class="dim text-xs">段位</div><b class="gold">{{ tierName }}</b></div>
           <div><div class="dim text-xs">天梯排名</div><b class="gold">第 {{ myPvpRank }}</b></div>
           <div><div class="dim text-xs">论道积分</div><b class="jade">{{ g.pvp.points }}</b></div>
           <div><div class="dim text-xs">战绩</div><b>{{ g.pvp.wins }}胜 {{ g.pvp.losses }}负</b></div>
         </div>
-        <div class="text-xs dim mt-2">赢了对局积分上升、排名前进；输了掉分掉名次。对手实力随段位提升，需消耗「论道帖」（挖灵脉有概率获得，战令/商店可兑换）。</div>
+        <div class="text-xs dim mt-2">赢了对局积分上升、排名前进；输了掉分掉名次。对手实力随段位提升，需消耗「论道帖」（摇落宝树有概率获得，战令/商店可兑换）。</div>
         <div class="flex gap-2 mt-2 items-center flex-wrap">
           <button class="btn btn-gold" :disabled="g.res.pvpTicket < 1" @click="g.pvpMatch()">{{ g.res.pvpTicket < 1 ? '论道帖不足' : '匹配对战（论道帖×1）' }}</button>
           <span class="text-xs">持有论道帖 <b class="gold">{{ g.res.pvpTicket }}</b> 张</span>
@@ -58,7 +57,8 @@
     <!-- 众生 -->
     <template v-else>
       <div class="panel text-xs dim">
-        点开任意修士查看详情（属性/喜好/携宝），投其所好送礼好感翻倍；卡片「赠礼」按钮会自动挑一件（优先投其所好）。每日「灵石礼金/赠礼」合计 {{ g.giftMax }} 次（月卡 +5）、「教导」5 次、「请教/指点」1 次（对方战力更高为请教，更低为指点，每日首次加好感）。还可切磋、拜师、收徒。
+        点开修士查看详情、投其所好赠礼、请教论道，还可切磋、拜师、收徒。
+        <button class="info-dot" type="button" aria-label="结交玩法说明" @click="g.pushModal('text', { title: '结交玩法', body: SOCIAL_INFO })">!</button>
       </div>
       <div class="grid md:grid-cols-2 gap-2">
         <div v-for="n in g.npcs" :key="n.id" class="panel !p-3 cursor-pointer" @click="openNpc(n.id)">
@@ -90,7 +90,6 @@
             <button class="btn btn-xs" @click="openNpc(n.id)">详 情</button>
             <button class="btn btn-xs" title="自动挑一件礼物：优先投其所好，其次喜好值最高" @click="g.quickGift(n.id)">赠 礼</button>
             <button class="btn btn-xs" @click="g.chatNpc(n.id)">{{ powerOf(n) > g.derived.power ? '请教' : '指点' }}（{{ npcCount('chat', n.id) }}/1）</button>
-            <button class="btn btn-xs" @click="g.teachNpc(n.id)">教导（{{ npcCount('teach', n.id) }}/5）</button>
             <button v-if="n.rel === 'lover'" class="btn btn-xs btn-gold" @click="g.shuangxiu(n.id)">双修</button>
           </div>
         </div>
@@ -108,14 +107,16 @@ import { fmt } from '../core/format'
 import type { Npc } from '../types'
 
 const g = useGame()
-const tabs = [
-  { id: 'rank', n: '天骄榜' }, { id: 'pvp', n: '论道台' }, { id: 'npc', n: '众生百态' },
-]
 // 子页由 store 驱动（首页「仙途万象」可直接进入对应子页）
-const tab = computed({
-  get: () => g.socialTab || 'rank',
-  set: (v: string) => { g.socialTab = v },
-})
+const tab = computed(() => g.socialTab || 'rank')
+// 三个独立页面的静态标题（不再提供页内切换）
+const PAGE_INFO: Record<string, [string, string]> = {
+  rank: ['天 骄 榜', '天下修士战力排位'],
+  pvp: ['论 道 台', '仙武天梯 · 每周商店'],
+  npc: ['众 生 百 态', '结交 · 赠礼 · 延揽'],
+}
+const pageTitle = computed(() => PAGE_INFO[tab.value]?.[0] || '')
+const pageSub = computed(() => PAGE_INFO[tab.value]?.[1] || '')
 
 const tierIdx = computed(() => pvpTierIdx(g.pvp.points))
 const tierName = computed(() => PVP_TIERS[tierIdx.value].n + '段')
@@ -124,8 +125,10 @@ const myPvpRank = computed(() => pvpRank(g.pvp.points))
 function realmOf(n: Npc) { return npcRealm(n) }
 function powerOf(n: Npc) { return npcPower(n) }
 function flavorText(n: Npc) { return n.flavor }
-function npcCount(kind: 'gift' | 'teach' | 'chat', id: number): number {
-  return (g.npcDaily[kind] as Record<number, number>)[id] || 0
-}
+function npcCount(kind: 'gift' | 'chat', id: number): number { return (g.npcDaily[kind] as Record<number, number>)[id] || 0 }
+// 「结交玩法」说明：长文案收进 ⓘ
+const SOCIAL_INFO = `· 点开修士卡片可查看属性、喜好与携宝；投其所好赠礼，好感 ×2.5。
+· 每日「灵石礼金 + 赠礼」合计 ${g.giftMax} 次（月卡 +5）；「请教/指点」每日 1 次：对方战力更高为请教，更低为指点，首次加好感 4~8。
+· 好感 80 且战力不弱于对方、非仇敌，可邀其入你自创的宗门（门人上限 8）；还可切磋、拜师、收徒、结为道侣。`
 function openNpc(id: number) { g.pushModal('npc', id) }
 </script>

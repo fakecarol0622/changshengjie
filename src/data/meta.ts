@@ -1,15 +1,16 @@
 // ===== 运营层：在线奖励 / 新手目标 / 收集奖励 / 修行战令 / 仙武商店 / 周结算 =====
 import type { Mods } from '../types'
 import type { RewardItem } from './rewards'
+import { PREMIUM_REWARDS } from './premium'
 
 // —— 在线奖励（挂机满时长领取，每日重置） ——
 export interface OnlineDef { sec: number; n: string; grant: RewardItem[] }
 export const ONLINE_REWARDS: OnlineDef[] = [
-  { sec: 300, n: '5 分钟', grant: [{ t: 'res', id: 'lingshi', n: 1500 }, { t: 'res', id: 'xianyu', n: 1 }] },
-  { sec: 900, n: '15 分钟', grant: [{ t: 'dynres', id: 'lingshi' }, { t: 'res', id: 'lingmai', n: 10 }] },
-  { sec: 1800, n: '30 分钟', grant: [{ t: 'res', id: 'xianyu', n: 5 }, { t: 'res', id: 'xilian', n: 2 }, { t: 'res', id: 'gachaTicket', n: 1 }] },
-  { sec: 3600, n: '60 分钟', grant: [{ t: 'res', id: 'xianyu', n: 10 }, { t: 'res', id: 'gongming', n: 2 }] },
-  { sec: 7200, n: '120 分钟', grant: [{ t: 'res', id: 'xianyu', n: 20 }, { t: 'res', id: 'gachaTicket', n: 2 }, { t: 'pill', id: 'podan', n: 1, q: 2 }] },
+  { sec: 300, n: '5 分钟', grant: [{ t: 'dynres', id: 'lingshi', minutes: 60, minimum: 2000 }, { t: 'res', id: 'xianyu', n: PREMIUM_REWARDS.online[0] }] },
+  { sec: 900, n: '15 分钟', grant: [{ t: 'dynres', id: 'lingshi' }, { t: 'res', id: 'lingmai', n: 10 }, { t: 'res', id: 'xianyu', n: PREMIUM_REWARDS.online[1] }] },
+  { sec: 1800, n: '30 分钟', grant: [{ t: 'dynres', id: 'lingshi', minutes: 90, minimum: 3000 }, { t: 'res', id: 'xianyu', n: PREMIUM_REWARDS.online[2] }, { t: 'res', id: 'xilian', n: 2 }, { t: 'res', id: 'gachaTicket', n: 1 }] },
+  { sec: 3600, n: '60 分钟', grant: [{ t: 'dynres', id: 'lingshi', minutes: 120, minimum: 5000 }, { t: 'res', id: 'xianyu', n: PREMIUM_REWARDS.online[3] }, { t: 'res', id: 'gongming', n: 2 }] },
+  { sec: 7200, n: '120 分钟', grant: [{ t: 'dynres', id: 'lingshi', minutes: 180, minimum: 8000 }, { t: 'res', id: 'xianyu', n: PREMIUM_REWARDS.online[4] }, { t: 'res', id: 'gachaTicket', n: 2 }, { t: 'pill', id: 'podan', n: 1, q: 2 }] },
 ]
 
 // —— 新手目标链（达成自动发放） ——
@@ -27,20 +28,20 @@ export interface GoalCtx {
 }
 export interface GoalDef { id: string; n: string; desc: string; grant: RewardItem[]; ok: (c: GoalCtx) => boolean }
 export const GOALS: GoalDef[] = [
-  { id: 'g1', n: '初入仙途', desc: '突破至炼气期', grant: [{ t: 'res', id: 'lingshi', n: 3000 }, { t: 'res', id: 'xianyu', n: 5 }], ok: c => c.major >= 1 },
-  { id: 'g2', n: '小试身手', desc: '挖掘灵脉 5 次', grant: [{ t: 'res', id: 'lingmai', n: 10 }, { t: 'res', id: 'xianyu', n: 3 }], ok: c => c.pulls >= 5 },
+  { id: 'g1', n: '初入仙途', desc: '突破至炼气期', grant: [{ t: 'res', id: 'lingshi', n: 3000 }, { t: 'res', id: 'xianyu', n: 20 }], ok: c => c.major >= 1 },
+  { id: 'g2', n: '小试身手', desc: '摇落宝树 5 次', grant: [{ t: 'res', id: 'lingmai', n: 10 }, { t: 'res', id: 'xianyu', n: 20 }], ok: c => c.pulls >= 5 },
   { id: 'g3', n: '披挂上阵', desc: '穿戴齐六件装备', grant: [{ t: 'res', id: 'xilian', n: 3 }], ok: c => c.equippedCount >= 6 },
-  { id: 'g4', n: '站稳脚跟', desc: '战力达到 5000', grant: [{ t: 'res', id: 'xianyu', n: 10 }], ok: c => c.power >= 5000 },
-  { id: 'g5', n: '副本初探', desc: '通关浮尘矿窟（普通）', grant: [{ t: 'res', id: 'sweep', n: 2 }, { t: 'res', id: 'xianyu', n: 5 }], ok: c => !!c.cleared['kuangku_0'] },
-  { id: 'g6', n: '降妖之人', desc: '收服第一只精怪', grant: [{ t: 'mat', id: 'shouhun', n: 10 }, { t: 'res', id: 'xianyu', n: 5 }], ok: c => c.famCount >= 1 },
+  { id: 'g4', n: '站稳脚跟', desc: '战力达到 5000', grant: [{ t: 'res', id: 'xianyu', n: 30 }], ok: c => c.power >= 5000 },
+  { id: 'g5', n: '副本初探', desc: '通关浮尘矿窟（普通）', grant: [{ t: 'res', id: 'sweep', n: 2 }, { t: 'res', id: 'xianyu', n: 20 }], ok: c => !!c.cleared['kuangku_0'] },
+  { id: 'g6', n: '降妖之人', desc: '收服第一只精怪', grant: [{ t: 'mat', id: 'shouhun', n: 10 }, { t: 'res', id: 'xianyu', n: 20 }], ok: c => c.famCount >= 1 },
   { id: 'g7', n: '百炼成钢', desc: '把装备强化到 +5', grant: [{ t: 'res', id: 'lingshi', n: 10000 }], ok: c => c.maxEnh >= 5 },
-  { id: 'g8', n: '筑基问道', desc: '突破至筑基期', grant: [{ t: 'res', id: 'xianyu', n: 20 }], ok: c => c.major >= 2 },
-  { id: 'g9', n: '寻个靠山', desc: '加入任意宗门', grant: [{ t: 'res', id: 'contrib', n: 50 }, { t: 'res', id: 'xianyu', n: 10 }], ok: c => c.sect },
+  { id: 'g8', n: '筑基问道', desc: '突破至筑基期', grant: [{ t: 'res', id: 'xianyu', n: 60 }], ok: c => c.major >= 2 },
+  { id: 'g9', n: '寻个靠山', desc: '加入任意宗门', grant: [{ t: 'res', id: 'contrib', n: 50 }, { t: 'res', id: 'xianyu', n: 30 }], ok: c => c.sect },
   { id: 'g10', n: '剑冢扬名', desc: '通关万剑冢（普通）', grant: [{ t: 'egg', qmin: 4, qmax: 8 }], ok: c => !!c.cleared['jianzhong_0'] },
-  { id: 'g11', n: '名动一方', desc: '战力达到 10000', grant: [{ t: 'res', id: 'xianyu', n: 15 }], ok: c => c.power >= 1e4 },
+  { id: 'g11', n: '名动一方', desc: '战力达到 10000', grant: [{ t: 'res', id: 'xianyu', n: 45 }], ok: c => c.power >= 1e4 },
   { id: 'g12', n: '登塔试炼', desc: '镇妖塔达到第 10 层', grant: [{ t: 'res', id: 'gongming', n: 5 }], ok: c => c.towerFloor >= 10 },
-  { id: 'g13', n: '金丹大道', desc: '突破至金丹期', grant: [{ t: 'res', id: 'xianyu', n: 30 }, { t: 'pill', id: 'podan', n: 1, q: 2 }], ok: c => c.major >= 3 },
-  { id: 'g14', n: '轮回之路', desc: '首次转世', grant: [{ t: 'res', id: 'xianyu', n: 50 }], ok: c => c.reinc >= 1 },
+  { id: 'g13', n: '金丹大道', desc: '突破至金丹期', grant: [{ t: 'res', id: 'xianyu', n: 90 }, { t: 'pill', id: 'podan', n: 1, q: 2 }], ok: c => c.major >= 3 },
+  { id: 'g14', n: '轮回之路', desc: '首次转世', grant: [{ t: 'res', id: 'xianyu', n: 150 }], ok: c => c.reinc >= 1 },
 ]
 
 // —— 收集奖励（达成后永久加成，计入派生属性） ——
@@ -64,15 +65,15 @@ export const PASS_MAX = 30
 export function passSeason(now = Date.now()): number { return Math.floor(now / (10 * 86400000)) }
 export function passSeasonEnd(now = Date.now()): number { return (Math.floor(now / (10 * 86400000)) + 1) * 10 * 86400000 }
 export function passFree(lvl: number): RewardItem[] {
-  const out: RewardItem[] = [{ t: 'res', id: 'lingshi', n: Math.round(800 * Math.pow(1.28, lvl)) }]
+  const out: RewardItem[] = [{ t: 'dynres', id: 'lingshi', minutes: 15 + lvl * 5, minimum: Math.round(800 * Math.pow(1.28, lvl)) }]
   if (lvl % 5 === 0) out.push({ t: 'res', id: 'xilian', n: 2 })
   return out
 }
 export function passPrem(lvl: number): RewardItem[] {
-  // 豪华线：奖励随等级逐级递增，且品类丰富（仙玉/开脉石/洗练石为基础，里程碑加稀有物）
+  // 豪华线：奖励随等级逐级递增，且品类丰富（仙玉/灵露/洗练石为基础，里程碑加稀有物）
   const out: RewardItem[] = [
     { t: 'res', id: 'xianyu', n: 20 + lvl * 3 }, // 23 → 110 仙玉/级，越往后越多
-    { t: 'res', id: 'lingmai', n: 4 + lvl * 2 }, // 6 → 64 开脉石
+    { t: 'res', id: 'lingmai', n: 4 + lvl * 2 }, // 6 → 64 灵露
     { t: 'res', id: 'xilian', n: 1 + Math.floor(lvl / 3) }, // 1 → 11 洗练石
   ]
   if (lvl % 5 === 0) {
@@ -109,7 +110,7 @@ export const PVP_SHOP: PvpSku[] = [
   { id: 'sw_ticket', n: '论道帖 ×2', desc: '论道台入场券', cost: 60, weekly: 3, grant: [{ t: 'res', id: 'pvpTicket', n: 2 }] },
   { id: 'sw_xilian', n: '洗练石 ×5', desc: '重铸词条数值', cost: 60, weekly: 2, grant: [{ t: 'res', id: 'xilian', n: 5 }] },
   { id: 'sw_gaiming', n: '改命石 ×2', desc: '重铸词条类型', cost: 90, weekly: 2, grant: [{ t: 'res', id: 'gaiming', n: 2 }] },
-  { id: 'sw_lingmai', n: '开脉石 ×30', desc: '开凿龙脉消耗', cost: 80, weekly: 3, grant: [{ t: 'res', id: 'lingmai', n: 30 }] },
+  { id: 'sw_lingmai', n: '灵露 ×30', desc: '宝树培育消耗', cost: 80, weekly: 3, grant: [{ t: 'res', id: 'lingmai', n: 30 }] },
   { id: 'sw_sweep', n: '扫荡券 ×3', desc: '副本扫荡', cost: 50, weekly: 2, grant: [{ t: 'res', id: 'sweep', n: 3 }] },
   { id: 'sw_podan', n: '破障丹 ×1', desc: '突破成功率 +12%', cost: 100, weekly: 2, grant: [{ t: 'pill', id: 'podan', n: 1, q: 2 }] },
   { id: 'sw_egg', n: '灵兽蛋（4~10 品）', desc: '孵化灵兽', cost: 150, weekly: 1, grant: [{ t: 'egg', qmin: 4, qmax: 10 }] },

@@ -18,7 +18,7 @@ export function fmt(n: number): string {
 }
 
 export function fmt1(n: number): string {
-  return (Math.round(n * 10) / 10).toString()
+  return (Math.round(n * (n > 0 && n < 0.1 ? 1000 : 10)) / (n > 0 && n < 0.1 ? 1000 : 10)).toString()
 }
 
 export function fmtTime(ms: number): string {

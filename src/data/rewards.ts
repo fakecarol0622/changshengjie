@@ -2,11 +2,13 @@
 import { fmt } from '../core/format'
 import { qName } from './qualities'
 import { MAT_MAP } from './items'
+import { PREMIUM_REWARDS, realmXianyu } from './premium'
+import { realmLingshiReward } from './lingshi'
 
 // —— 通用奖励条目（由 store 的 grant() 执行） ——
 export type RewardItem =
   | { t: 'res'; id: string; n: number }
-  | { t: 'dynres'; id: 'lingshi' | 'lingmai' } // 数量随境界
+  | { t: 'dynres'; id: 'lingshi' | 'lingmai'; minutes?: number; minimum?: number } // 数量随境界
   | { t: 'mat'; id: string; n: number }
   | { t: 'pill'; id: string; n: number; q?: number }
   | { t: 'egg'; qmin: number; qmax: number }
@@ -14,7 +16,7 @@ export type RewardItem =
   | { t: 'equip'; qmin: number; qmax: number }
 
 export const RES_LABEL: Record<string, string> = {
-  lingshi: '灵石', lingmai: '开脉石', xianyu: '仙玉', xilian: '洗练石',
+  lingshi: '灵石', lingmai: '灵露', xianyu: '仙玉', xilian: '洗练石',
   gongming: '共鸣石', sweep: '扫荡券', auction: '拍卖令', qihun: '器魂', contrib: '贡献',
   pvpTicket: '论道帖', gaiming: '改命石', jianling: '剑冢令', xingyun: '星陨石', xianwu: '仙武积分',
   gachaTicket: '寻仙令',
@@ -23,15 +25,16 @@ export const RES_LABEL: Record<string, string> = {
 // —— 月度签到（30 天一轮，满月后从第 1 天重新开始） ——
 export const MONTH_DAYS = 30
 const MONTH_BASE: RewardItem[] = [
-  { t: 'res', id: 'lingshi', n: 1000 },
+  { t: 'dynres', id: 'lingshi', minutes: 60, minimum: 2000 },
   { t: 'res', id: 'lingmai', n: 5 },
+  { t: 'res', id: 'xianyu', n: PREMIUM_REWARDS.dailySign },
 ]
 const MONTH_EXTRA: Record<number, RewardItem[]> = {
   3: [{ t: 'res', id: 'xilian', n: 5 }],
   5: [{ t: 'res', id: 'gongming', n: 5 }],
   6: [{ t: 'res', id: 'xianyu', n: 10 }, { t: 'res', id: 'gachaTicket', n: 1 }],
   7: [{ t: 'equip', qmin: 7, qmax: 9 }],
-  10: [{ t: 'res', id: 'lingmai', n: 20 }, { t: 'res', id: 'lingshi', n: 8000 }],
+  10: [{ t: 'res', id: 'lingmai', n: 20 }, { t: 'dynres', id: 'lingshi', minutes: 240, minimum: 8000 }],
   12: [{ t: 'res', id: 'xianyu', n: 15 }, { t: 'res', id: 'gachaTicket', n: 1 }],
   14: [{ t: 'pill', id: 'podan', n: 2, q: 2 }],
   15: [{ t: 'res', id: 'sweep', n: 3 }],
@@ -50,11 +53,11 @@ export function monthReward(day: number): RewardItem[] {
 const NEWBIE: RewardItem[][] = [
   [{ t: 'res', id: 'lingshi', n: 3000 }, { t: 'res', id: 'lingmai', n: 10 }],
   [{ t: 'res', id: 'xilian', n: 5 }],
-  [{ t: 'res', id: 'xianyu', n: 20 }],
+  [{ t: 'res', id: 'xianyu', n: 60 }],
   [{ t: 'res', id: 'gongming', n: 5 }, { t: 'res', id: 'lingmai', n: 15 }],
   [{ t: 'pill', id: 'podan', n: 2, q: 2 }],
-  [{ t: 'res', id: 'xianyu', n: 30 }],
-  [{ t: 'equip', qmin: 7, qmax: 9 }, { t: 'res', id: 'xianyu', n: 50 }],
+  [{ t: 'res', id: 'xianyu', n: 100 }],
+  [{ t: 'equip', qmin: 7, qmax: 9 }, { t: 'res', id: 'xianyu', n: 180 }],
 ]
 export function newbieReward(day: number): RewardItem[] {
   return NEWBIE[day - 1] || []
@@ -63,8 +66,8 @@ export function newbieReward(day: number): RewardItem[] {
 // —— 境界大礼包（修为达到第 n 个大境界可领，n=1 炼气 … 10 仙人） ——
 export function realmGift(n: number): RewardItem[] {
   const out: RewardItem[] = [
-    { t: 'res', id: 'xianyu', n: 15 + 5 * n },
-    { t: 'res', id: 'lingshi', n: Math.round(5000 * Math.pow(2.2, n - 1)) },
+    { t: 'res', id: 'xianyu', n: realmXianyu(n) },
+    { t: 'res', id: 'lingshi', n: realmLingshiReward(n) },
     { t: 'res', id: 'lingmai', n: 10 * Math.pow(2, n - 1) },
     { t: 'res', id: 'xilian', n: 4 * n },
     { t: 'res', id: 'gongming', n: 4 * n },
@@ -106,7 +109,7 @@ export interface XianyuSku {
 }
 export const XY_SKUS: XianyuSku[] = [
   { id: 'lingshi_bag', n: '灵石袋', desc: '大量灵石，随境界提升', cost: 10, limit: 5, dynRes: 'lingshi' },
-  { id: 'lingmai_bag', n: '开脉石袋', desc: '开脉石，随境界提升', cost: 15, limit: 3, dynRes: 'lingmai' },
+  { id: 'lingmai_bag', n: '灵露瓶', desc: '灵露，随境界提升', cost: 15, limit: 3, dynRes: 'lingmai' },
   { id: 'sweep5', n: '扫荡券 ×5', desc: '副本扫荡消耗', cost: 20, limit: 3, resId: 'sweep', amount: 5 },
   { id: 'xilian5', n: '洗练石 ×5', desc: '重铸装备词条数值', cost: 15, limit: 3, resId: 'xilian', amount: 5 },
   { id: 'gongming5', n: '共鸣石 ×5', desc: '重铸词条类型', cost: 15, limit: 3, resId: 'gongming', amount: 5 },
@@ -126,7 +129,7 @@ export interface PayPack {
 }
 export const PAY_PACKS: PayPack[] = [
   { id: 'mk', rmb: 30, n: 300, kind: 'month', bonus: '月卡：立即得 300 仙玉，30 天内每日可领 100 仙玉' },
-  { id: 'prem', rmb: 68, n: 0, kind: 'pass', bonus: '解锁修行战令「豪华奖励线」（本赛季有效）· 每级仙玉/开脉石/洗练石逐级递增、逢5级加共鸣石/改命石/论道帖、逢10级加寻仙令，送灵兽蛋/龙髓/兽魂/妖珠，30级送 15~16 品装备 + 仙玉×1288 + 太古兽卵' },
+  { id: 'prem', rmb: 68, n: 0, kind: 'pass', bonus: '解锁修行战令「豪华奖励线」（本赛季有效）· 每级仙玉/灵露/洗练石逐级递增、逢5级加共鸣石/改命石/论道帖、逢10级加寻仙令，送灵兽蛋/龙髓/兽魂/妖珠，30级送 15~16 品装备 + 仙玉×1288 + 太古兽卵' },
   { id: 'p6', rmb: 6, n: 60, first: true },
   { id: 'p30', rmb: 30, n: 330, first: true },
   { id: 'p98', rmb: 98, n: 1180, first: true },

@@ -18,7 +18,7 @@ export interface Equip {
   name: string
   affixes: AffixRoll[]
   rune?: string // 灵纹 id
-  selfMined: boolean // 自己挖出（未交易过）
+  selfMined: boolean // 自己摇出（未交易过）
   enchanted: boolean // 是否洗练过
   elements: string[] // 五行标签
   flavors: string[] // 流派标签（剑类/雷系/冰系/火系/炼体/魔系/仙系）
@@ -54,7 +54,7 @@ export interface Stats {
   healCut: number // 弱化治疗：敌方治疗量 -%
   beastBoost: number // 强化灵兽：己方灵兽/精怪技能效果 +%
   beastCut: number // 弱化灵兽：敌方灵兽类技能效果 -%
-  // 挖掘 / 生活类加成
+  // 摇落 / 生活类加成
   dropLuck: number // 出货率 %（影响品质权重与星级）
   starFloor: number // 星级保底（>0 时至少该星）
   pillBonus: number // 丹药效果 %
@@ -108,6 +108,7 @@ export interface Combatant {
   procs: Proc[]
   hp: number
   isPlayer?: boolean
+  isBoss?: boolean
 }
 
 export interface BattleResult {

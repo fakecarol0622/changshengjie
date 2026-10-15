@@ -10,7 +10,7 @@
           <span class="chip">{{ slotName }}</span>
           <span v-if="e.rune" class="chip chip-gold">灵纹·{{ runeName }}</span>
           <span v-if="e.enchanted" class="chip">已洗练</span>
-          <span v-if="e.selfMined" class="chip chip-jade">自挖</span>
+          <span v-if="e.selfMined" class="chip chip-jade">摇得</span>
         </div>
         <div class="mt-1 flex flex-wrap">
           <span v-for="(a, i) in e.affixes" :key="i" class="affix-chip" :class="'t' + a.tier">{{ affixText(a) }}</span>

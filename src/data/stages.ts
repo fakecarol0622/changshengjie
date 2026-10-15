@@ -1,5 +1,7 @@
 // ===== 问道长阶：寻道大千式小关卡（90 阶 · 6 大段 · 剧情嵌入里程碑） =====
 import type { RewardItem } from './rewards'
+import { stageXianyu } from './premium'
+import { stageLingshiReward } from './lingshi'
 
 export const STAGE_MAX = 90
 
@@ -32,8 +34,9 @@ export function stageEnemy(n: number): { name: string; lv: number; mult: number;
 // 首通奖励：基础 + 每 5 阶 + 每 10 阶 + 每 15 阶
 export function stageRewards(n: number): RewardItem[] {
   const out: RewardItem[] = [
-    { t: 'res', id: 'lingshi', n: Math.round(300 * Math.pow(1.3, n)) },
-    { t: 'res', id: 'xianyu', n: 1 + Math.floor(n / 12) },
+    // 普通首通约一小时参考产出，守关约四小时，保留新手最低奖励。
+    { t: 'res', id: 'lingshi', n: stageLingshiReward(stageEnemy(n).lv, n % 10 === 0) },
+    { t: 'res', id: 'xianyu', n: stageXianyu(n) },
   ]
   if (n % 3 === 0) out.push({ t: 'mat', id: 'shouhun', n: 2 + Math.floor(n / 10) })
   if (n % 5 === 0) out.push({ t: 'res', id: 'xilian', n: 2 }, { t: 'mat', id: 'yaozhu', n: 2 })

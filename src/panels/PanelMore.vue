@@ -1,5 +1,14 @@
 <template>
   <div class="flex flex-col gap-3">
+    <div class="panel">
+      <div class="panel-t">仙 途 百 业 <span class="text-xs dim">修行之外，亦有天地</span></div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <button v-for="entry in entries" :key="entry.id" class="system-entry" @click="props.go(entry.id)">
+          <span class="system-seal" aria-hidden="true">{{ entry.seal }}</span>
+          <span><b class="gold block">{{ entry.name }}</b><span class="text-xs dim">{{ entry.desc }}</span></span>
+        </button>
+      </div>
+    </div>
     <!-- 工具（弹窗化） -->
     <div class="panel">
       <div class="panel-t">工 具</div>
@@ -17,8 +26,9 @@
     <div class="panel">
       <div class="panel-t">轮 回 转 世</div>
       <div class="text-sm">转世次数 {{ g.reinc.count }} · 轮回之力 <b class="gold">{{ g.reinc.points }}</b> · 历史身死 {{ g.codex.deaths }} 次</div>
-      <div class="text-xs dim mt-1">渡劫失败或主动散功后可转世（仙途无尽，寿元不再成为枷锁）。轮回之力提升初始属性点、稀有灵根概率与体质觉醒率。</div>
-      <button class="btn btn-sm mt-2" :class="renounceArm ? 'btn-red' : ''" @click="doRenounce">{{ renounceArm ? '再点一次确认散功转世' : '主动散功转世（修为尽弃，铭刻于万古流芳）' }}</button>
+      <div class="text-xs dim mt-1">炼气期起可主动转世，获得与死亡转世相同的轮回之力。保留图鉴与历代档案，重置此生装备、修为与资源。</div>
+      <div class="text-sm jade mt-2">本次可得轮回之力 +{{ g.reincReward }}</div>
+      <button class="btn btn-sm mt-2" :disabled="g.major < 1" :class="renounceArm ? 'btn-red' : ''" @click="doRenounce">{{ renounceArm ? `确认散功，获得 ${g.reincReward} 点轮回之力` : g.major < 1 ? '修至炼气期后可转世' : '主动散功转世' }}</button>
     </div>
 
     <!-- 跨世档案 -->
@@ -39,7 +49,14 @@ import { useGame } from '../stores/game'
 import { fmt } from '../core/format'
 
 const props = defineProps<{ go: (t: string) => void }>()
-void props
+const entries = [
+  { id: 'cave', seal: '山', name: '洞府', desc: '灵田 · 炼丹 · 修炼设施' },
+  { id: 'sect', seal: '宗', name: '宗门', desc: '传承 · 任务 · 门人' },
+  { id: 'market', seal: '市', name: '坊市', desc: '交易 · 拍卖 · 奇货' },
+  { id: 'gacha', seal: '缘', name: '仙缘', desc: '寻仙 · 精怪 · 收藏' },
+  { id: 'codex', seal: '卷', name: '天机阁', desc: '图鉴 · 称号 · 共鸣' },
+  { id: 'social', seal: '人', name: '江湖', desc: '修士 · 关系 · 榜单' },
+]
 const g = useGame()
 
 const renounceArm = ref(false)

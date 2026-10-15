@@ -3,7 +3,7 @@
     <!-- 未入宗门 -->
     <template v-if="!g.sect">
       <div class="panel text-xs dim">
-        加入宗门可获得职位晋升、贡献商店折扣、宗门任务与宗门战。也可作为散修（灵脉出货+15% 概念加成，商店加价）。
+        加入宗门可获得职位晋升、贡献商店折扣、宗门任务与宗门战。也可作为散修（宝树出货+15% 概念加成，商店加价）。
       </div>
       <div class="grid md:grid-cols-2 gap-2">
         <div v-for="s in SECTS" :key="s.id" class="panel">
@@ -119,10 +119,10 @@ const contribOk = computed(() => !!nextRank.value && g.res.contrib >= nextRank.v
 const realmOk = computed(() => !!nextRank.value && (g.major > nextRank.value.realm || (g.major === nextRank.value.realm && g.phase >= nextRank.value.phase)))
 const tenureOk = computed(() => {
   if (!nextRank.value) return false
-  const dk = Math.floor(Date.now() / 86400000)
+  const dk = g.dayKey
   return dk - (g.sectRankAt || 0) >= nextRank.value.tenure
 })
-const weekKey = computed(() => Math.floor(Date.now() / (86400000 * 3)))
+const weekKey = computed(() => g.weekKey)
 
 function modsText(m: Mods): string {
   const parts: string[] = []

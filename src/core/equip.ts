@@ -94,10 +94,10 @@ export function rollQuality(qmin: number, qmax: number, luck = 0, falloff = 0.55
   return weighted(items)
 }
 
-export function genEquip(lv: number, qmin: number, qmax: number, opts: { slot?: SlotKey; q?: number; forceRune?: boolean; selfMined?: boolean; name?: string } = {}): Equip {
+export function genEquip(lv: number, qmin: number, qmax: number, opts: { slot?: SlotKey; q?: number; forceRune?: boolean; selfMined?: boolean; name?: string; starFloor?: number } = {}): Equip {
   const q = opts.q ?? rollQuality(qmin, qmax)
   const slot = opts.slot ?? pick(SLOTS)
-  const stars = Math.max(weighted(STAR_W.map((w, i) => ({ w, v: i + 1 }))), 1)
+  const stars = Math.min(5, Math.max(weighted(STAR_W.map((w, i) => ({ w, v: i + 1 }))), opts.starFloor || 1))
   let base = pick(SLOT_BASES[slot])
   const prefix = drawPrefix(q)
   // 避免「青锋·锋」「天罡·罡」这类同名尾字撞车
@@ -168,7 +168,7 @@ export function procEffectText(p: Proc): string {
     case 'true': return `造成 ${Math.round((e.mult || 1) * 100)}% 攻击真实伤害`
     case 'heal': return `回复 ${e.pct}% 气血`
     case 'shield': return `获得 ${e.pct}% 气血护盾`
-    case 'dot': return `${e.name || '持续伤害'}（${e.rounds}回合·每回合${e.pct}%）`
+    case 'dot': return `${e.name || '持续伤害'}（${e.rounds}回合·每回合${Math.round((e.pct || 0) * 100)}%攻击伤害）`
     case 'stun': return `击晕目标 ${e.rounds} 回合`
     case 'atkBuff': return `攻击 +${e.pct}%（${e.rounds}回合）`
     case 'defDown': return `破防 ${e.pct}%（${e.rounds}回合）`
@@ -232,7 +232,7 @@ export function derive(ctx: DeriveCtx): Derived {
   s.hp = baseHp(lv)
   s.atk = baseAtk(lv)
   s.def = baseDef(lv)
-  s.spd = 10 + ctx.minor * 1.5
+  s.spd = 10 + lv * 0.4
 
   const A = ctx.attrs
   s.hp *= 1 + (A.genGu || 0) * 0.015
@@ -429,7 +429,8 @@ export function derive(ctx: DeriveCtx): Derived {
   s.atk = Math.max(1, Math.round(s.atk))
   s.def = Math.max(0, Math.round(s.def))
 
-  const cultMult = ctx.rootMult * (1 + ((A.wuXing || 0) / 20)) * (1 + (cultP + ctx.caveCultP + ctx.buffCultP) / 100)
+  // 悟性已由 cultRate 计算一次。
+  const cultMult = ctx.rootMult * (1 + (cultP + ctx.caveCultP + ctx.buffCultP) / 100)
   const power = calcPower(s, active.length)
   return { stats: s, procs, active, cultMult, power }
 }
@@ -442,6 +443,7 @@ export function refreshScore(e: Equip): void {
 // ===== 装备强化 =====
 export const ENH_MAX = 15
 export const ENH_STEP = 5 // 每级词条效果 +5%
+export function salvageLingshi(e: Equip): number { return Math.max(5, Math.round(e.score * 0.2)) }
 export function enhanceCost(e: Equip): { lingshi: number; lingmai: number } {
   const enh = e.enh || 0
   return { lingshi: Math.round(e.score * 0.06 * Math.pow(1.25, enh)), lingmai: 3 + enh * 2 }

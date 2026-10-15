@@ -32,7 +32,7 @@ export const MATERIALS: MatDef[] = [
   { id: 'seed3', n: '玉髓芝种子', type: 'misc', desc: '灵田可种' },
   { id: 'seed4', n: '九叶莲种子', type: 'misc', desc: '灵田可种' },
   { id: 'yaozhu', n: '妖珠碎片', type: 'misc', desc: '精怪凝结的妖珠碎块，30 枚可凝形一只精怪' },
-  { id: 'longsui', n: '龙髓', type: 'misc', desc: '烛龙脉的髓脂，疏通龙脉时每枚可缩短 10 分钟' },
+  { id: 'longsui', n: '龙髓', type: 'misc', desc: '烛龙脉的髓脂，缩短剩余培育时间20%，至少10分钟（不超过剩余时间）' },
   // 礼物（投其所好，好感翻倍）
   { id: 'lingcha', n: '雨前灵茶', type: 'gift', desc: '雾雨山巅采的灵茶（喜好：茶）' },
   { id: 'baihua', n: '百花酿', type: 'gift', desc: '以百花酿成的灵酒（喜好：酒）' },
@@ -159,7 +159,7 @@ export const TREASURES: TreasureDef[] = [
   { id: 'xuemoDao', n: '血魔刀', q: 12, desc: '吸血+15%，伤害+15%', mods: { lifestealAdd: 15, dmgP: 15 } },
   { id: 'yujingping', n: '玉净瓶', q: 10, desc: '每回合回复3%气血', procs: [PR('tr_yujing', '玉净甘露', 'round', 1, { t: 'heal', pct: 3 }, '甘露润体')] },
   { id: 'huntianling', n: '混天绫', q: 12, desc: '连击+12%', mods: { comboAdd: 12 } },
-  { id: 'qiankundai', n: '乾坤袋', q: 10, desc: '挖掘出货率+8%', mods: { dropLuck: 8 } },
+  { id: 'qiankundai', n: '乾坤袋', q: 10, desc: '摇落出货率+8%', mods: { dropLuck: 8 } },
   { id: 'panlongzhang', n: '蟠龙杖', q: 11, desc: '强化灵兽+15%，气血+10%', mods: { beastBoostAdd: 15, hpP: 10 } },
   { id: 'zhenhunfan', n: '镇魂幡', q: 12, desc: '击晕+6%，20%概率摄魂麻痹', mods: { stunAdd: 6 }, procs: [PR('tr_zhenhun', '摄魂', 'attack', 0.2, { t: 'stun', rounds: 1 }, '魂幡招展，神魂一滞')] },
   { id: 'jingangzhuo', n: '金刚琢', q: 12, desc: '反击+8%，受击时35%反震', mods: { counterAdd: 8 }, procs: [PR('tr_jingang', '金刚反震', 'hit', 0.35, { t: 'dmg', mult: 0.5 }, '金刚琢震，反噬其身')] },
@@ -202,7 +202,7 @@ export const BEAST_KINDS: BeastDef[] = [
   { id: 'rishi', n: '日狮', desc: '助战：攻击+10%', mods: { atkP: 10 } },
   { id: 'youmingquan', n: '幽冥犬', desc: '助战：吸血+5%', mods: { lifestealAdd: 5 } },
   { id: 'xuefu', n: '血蝠', desc: '助战：击杀回血', mods: { killHealPct: 0 } as Mods, procs: [PR('bs_xuefu', '血蝠·血蚀', 'attack', 0.25, { t: 'heal', pct: 3 }, '血光掠影')] },
-  { id: 'yuchan', n: '玉蟾', desc: '助战：挖掘出货率+5%', mods: { dropLuck: 5 } },
+  { id: 'yuchan', n: '玉蟾', desc: '助战：摇落出货率+5%', mods: { dropLuck: 5 } },
   { id: 'lingdie', n: '灵蝶', desc: '助战：速度+8%，冷却-8%', mods: { spdP: 8, cdrAdd: 8 } },
 ]
 export const BEAST_MAP: Record<string, BeastDef> = Object.fromEntries(BEAST_KINDS.map(b => [b.id, b]))

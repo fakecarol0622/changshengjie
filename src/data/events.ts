@@ -36,16 +36,16 @@ export interface EvtDef {
 
 export const EVENTS: EvtDef[] = [
   {
-    id: 'lantern', act: 'tide', n: '灵脉灯会', icon: '🏮', coin: '灯花',
-    desc: '灵脉潮涨之年，十二城同放祈天灯。挖掘灵脉、磨砺自身以集灯花，于灯楼兑换稀珍。',
+    id: 'lantern', act: 'tide', n: '宝树灯会', icon: '🏮', coin: '灯花',
+    desc: '宝树潮涨之年，十二城同放祈天灯。摇落宝树、磨砺自身以集灯花，于灯楼兑换稀珍。',
     tasks: [
-      { id: 'lt1', n: '挖掘灵脉 40 次', type: 'mine', target: 40, coins: 15 },
+      { id: 'lt1', n: '摇落宝树 40 次', type: 'mine', target: 40, coins: 15 },
       { id: 'lt2', n: '通关副本 3 次（含扫荡）', type: 'dungeon', target: 3, coins: 12 },
       { id: 'lt3', n: '闭关打坐 1 次', type: 'meditate', target: 1, coins: 8 },
     ],
     shop: [
-      { id: 'ls1', n: '龙髓 ×2', desc: '烛龙脉髓脂，疏通加速', cost: 20, limit: 3, grant: [{ t: 'mat', id: 'longsui', n: 2 }] },
-      { id: 'ls2', n: '开脉石（随境界）', desc: '开凿龙脉所用材料，数量随主角境界提升', cost: 15, limit: 5, grant: [{ t: 'dynres', id: 'lingmai' }] },
+      { id: 'ls1', n: '龙髓 ×2', desc: '烛龙脉髓脂，培育加速', cost: 20, limit: 3, grant: [{ t: 'mat', id: 'longsui', n: 2 }] },
+      { id: 'ls2', n: '灵露（随境界）', desc: '宝树培育所用材料，数量随主角境界提升', cost: 15, limit: 5, grant: [{ t: 'dynres', id: 'lingmai' }] },
       { id: 'ls3', n: '寻仙令 ×1', desc: '寻仙问道门票', cost: 25, limit: 2, grant: [{ t: 'res', id: 'gachaTicket', n: 1 }] },
       { id: 'ls4', n: '洗练石 ×5', desc: '词条洗练材料', cost: 18, limit: 3, grant: [{ t: 'res', id: 'xilian', n: 5 }] },
     ],
