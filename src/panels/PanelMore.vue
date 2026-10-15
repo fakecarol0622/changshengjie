@@ -4,7 +4,7 @@
       <div class="panel-t">仙 途 百 业 <span class="text-xs dim">修行之外，亦有天地</span></div>
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
         <button v-for="entry in entries" :key="entry.id" class="system-entry" @click="props.go(entry.id)">
-          <span class="system-seal" aria-hidden="true">{{ entry.seal }}</span>
+          <span class="system-seal" aria-hidden="true"><GlyphIcon :id="entry.icon" :size="20" :stroke="1.7" /></span>
           <span><b class="gold block">{{ entry.name }}</b><span class="text-xs dim">{{ entry.desc }}</span></span>
         </button>
       </div>
@@ -14,10 +14,10 @@
       <div class="panel-t">工 具</div>
       <div class="grid grid-cols-2 gap-2">
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" @click="g.pushModal('settings')">
-          <span class="text-base leading-none">⚙</span><span class="text-[11px]">设置</span>
+          <GlyphIcon id="settings" :size="17" /><span class="text-[11px]">设置</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" @click="g.pushModal('guide')">
-          <span class="text-base leading-none">📖</span><span class="text-[11px]">玩法</span>
+          <GlyphIcon id="story" :size="17" /><span class="text-[11px]">玩法</span>
         </button>
       </div>
     </div>
@@ -47,15 +47,16 @@
 import { ref } from 'vue'
 import { useGame } from '../stores/game'
 import { fmt } from '../core/format'
+import GlyphIcon from '../components/GlyphIcon.vue'
 
 const props = defineProps<{ go: (t: string) => void }>()
 const entries = [
-  { id: 'cave', seal: '山', name: '洞府', desc: '灵田 · 炼丹 · 修炼设施' },
-  { id: 'sect', seal: '宗', name: '宗门', desc: '传承 · 任务 · 门人' },
-  { id: 'market', seal: '市', name: '坊市', desc: '交易 · 拍卖 · 奇货' },
-  { id: 'gacha', seal: '缘', name: '仙缘', desc: '寻仙 · 精怪 · 收藏' },
-  { id: 'codex', seal: '卷', name: '天机阁', desc: '图鉴 · 称号 · 共鸣' },
-  { id: 'social', seal: '人', name: '江湖', desc: '修士 · 关系 · 榜单' },
+  { id: 'cave', icon: 'cave', name: '洞府', desc: '灵田 · 炼丹 · 修炼设施' },
+  { id: 'sect', icon: 'sect', name: '宗门', desc: '传承 · 任务 · 门人' },
+  { id: 'market', icon: 'market', name: '坊市', desc: '交易 · 拍卖 · 奇货' },
+  { id: 'gacha', icon: 'compass', name: '仙缘', desc: '寻仙 · 精怪 · 收藏' },
+  { id: 'codex', icon: 'codex', name: '天机阁', desc: '图鉴 · 称号 · 共鸣' },
+  { id: 'social', icon: 'npc', name: '江湖', desc: '修士 · 关系 · 榜单' },
 ]
 const g = useGame()
 

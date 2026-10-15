@@ -50,7 +50,7 @@
         <div class="pbar !h-1.5 mt-1"><div class="pfill !h-full" :style="{ width: (digReq ? Math.min(100, digs / digReq * 100) : 100) + '%' }"></div></div>
         <div class="text-xs mt-2">
           培育消耗：<b :class="g.res.lingshi >= upCost ? 'gold' : 'red'">灵石 {{ fmt(upCost) }}</b><span class="dim">（持有 {{ fmt(g.res.lingshi) }}<template v-if="g.res.lingshi < upCost"> · <b class="red">还差 {{ fmt(upCost - g.res.lingshi) }}</b></template>）</span>
-          · 预计耗时 <b class="gold">{{ fmtTime(upTime) }}</b>
+          · 预计耗时 <b class="gold">{{ fmtTime(upTime) }}</b> · 龙髓 <b class="gold">{{ longsui }}</b> 枚<span class="dim2">（培育中可加速）</span>
         </div>
         <button class="btn w-full mt-2" :class="canUp ? 'btn-gold' : ''" :disabled="!canUp" @click="g.veinStartUp()">
           {{ !digMet ? `还需在本重摇落 ${Math.max(0, digReq - digs)} 次` : g.res.lingshi < upCost ? `灵石不足 · 还差 ${fmt(upCost - g.res.lingshi)}` : '培 育 宝 树' }}
