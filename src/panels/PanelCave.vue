@@ -85,7 +85,7 @@
       </div>
 
       <div v-if="recipe" class="panel">
-        <div class="panel-t">火 候 控 制 · {{ PILL_MAP[recipe.out].n }}</div>
+        <div class="panel-t">火 候 控 制 · {{ PILL_MAP[recipe].n }}</div>
         <p class="text-xs dim mb-2">在光标进入高亮火区时点击「停」，火候越准，丹药品质越高。丹房等级与悟性可提升品质。</p>
         <div class="firetrack">
           <div class="fire-zone" :style="{ left: (zone - 0.12) * 100 + '%', width: '24%' }"></div>
@@ -188,8 +188,8 @@ function loop(t: number) {
   raf = requestAnimationFrame(loop)
 }
 watch(recipe, v => {
+  cancelAnimationFrame(raf)
   if (v) { zone.value = 0.3 + Math.random() * 0.4; t0 = performance.now(); raf = requestAnimationFrame(loop) }
-  else cancelAnimationFrame(raf)
 })
 onUnmounted(() => cancelAnimationFrame(raf))
 

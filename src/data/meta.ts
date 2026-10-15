@@ -69,10 +69,10 @@ export function passFree(lvl: number): RewardItem[] {
   return out
 }
 export function passPrem(lvl: number): RewardItem[] {
-  // 豪华线：奖励随等级逐级递增，且品类丰富（仙玉/灵脉石/洗练石为基础，里程碑加稀有物）
+  // 豪华线：奖励随等级逐级递增，且品类丰富（仙玉/开脉石/洗练石为基础，里程碑加稀有物）
   const out: RewardItem[] = [
     { t: 'res', id: 'xianyu', n: 20 + lvl * 3 }, // 23 → 110 仙玉/级，越往后越多
-    { t: 'res', id: 'lingmai', n: 4 + lvl * 2 }, // 6 → 64 灵脉石
+    { t: 'res', id: 'lingmai', n: 4 + lvl * 2 }, // 6 → 64 开脉石
     { t: 'res', id: 'xilian', n: 1 + Math.floor(lvl / 3) }, // 1 → 11 洗练石
   ]
   if (lvl % 5 === 0) {
@@ -109,7 +109,7 @@ export const PVP_SHOP: PvpSku[] = [
   { id: 'sw_ticket', n: '论道帖 ×2', desc: '论道台入场券', cost: 60, weekly: 3, grant: [{ t: 'res', id: 'pvpTicket', n: 2 }] },
   { id: 'sw_xilian', n: '洗练石 ×5', desc: '重铸词条数值', cost: 60, weekly: 2, grant: [{ t: 'res', id: 'xilian', n: 5 }] },
   { id: 'sw_gaiming', n: '改命石 ×2', desc: '重铸词条类型', cost: 90, weekly: 2, grant: [{ t: 'res', id: 'gaiming', n: 2 }] },
-  { id: 'sw_lingmai', n: '灵脉石 ×30', desc: '灵脉挖掘', cost: 80, weekly: 3, grant: [{ t: 'res', id: 'lingmai', n: 30 }] },
+  { id: 'sw_lingmai', n: '开脉石 ×30', desc: '开凿龙脉消耗', cost: 80, weekly: 3, grant: [{ t: 'res', id: 'lingmai', n: 30 }] },
   { id: 'sw_sweep', n: '扫荡券 ×3', desc: '副本扫荡', cost: 50, weekly: 2, grant: [{ t: 'res', id: 'sweep', n: 3 }] },
   { id: 'sw_podan', n: '破障丹 ×1', desc: '突破成功率 +12%', cost: 100, weekly: 2, grant: [{ t: 'pill', id: 'podan', n: 1, q: 2 }] },
   { id: 'sw_egg', n: '灵兽蛋（4~10 品）', desc: '孵化灵兽', cost: 150, weekly: 1, grant: [{ t: 'egg', qmin: 4, qmax: 10 }] },

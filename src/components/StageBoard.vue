@@ -15,7 +15,7 @@
         @click="doStage(n)"
       >
         {{ n }}
-        <span v-if="STAGE_STORY[n]" class="absolute -top-1 -right-1 text-[10px]">📖</span>
+        <span v-if="g.storyMarkSet.has(n)" class="absolute -top-1 -right-1 text-[10px]">📖</span>
         <span v-if="n <= g.stage.cleared" class="text-[10px]">✓</span>
       </button>
     </div>
@@ -33,8 +33,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useGame } from '../stores/game'
-import { STAGE_MAX, STAGE_SEGS, STAGE_STORY, stageBonus, stageEnemy, stageRewards, stageSeg } from '../data/stages'
-import { realmName } from '../data/realms'
+import { STAGE_MAX, STAGE_SEGS, stageBonus, stageEnemy, stageRewards, stageSeg } from '../data/stages'
+import { MAJOR } from '../data/realms'
 import { rewardBrief } from '../data/rewards'
 
 const props = defineProps<{ segOverride?: number | null }>()
@@ -58,8 +58,8 @@ const nextN = computed(() => Math.min(STAGE_MAX, g.stage.cleared + 1))
 const nextEnemy = computed(() => stageEnemy(nextN.value))
 
 function realmShort2(lv: number): string {
-  const major = Math.min(10, Math.floor(lv / 4))
-  return major === 0 ? '凡人' : realmName(major, 0)
+  const major = Math.min(10, Math.floor(lv / 40))
+  return MAJOR[major]
 }
 function nodeTitle(n: number): string {
   if (n <= g.stage.cleared) return `第 ${n} 阶（已通关）`
@@ -68,6 +68,9 @@ function nodeTitle(n: number): string {
 }
 function doStage(n: number) {
   if (n === g.stage.cleared + 1) g.stageEnter()
-  else if (STAGE_STORY[n] && g.storyCtxReady(STAGE_STORY[n]) && !g.story.done.includes(STAGE_STORY[n])) g.openStory(STAGE_STORY[n])
+  else {
+    const sid = g.storyIdAt(n)
+    if (sid) g.openStory(sid)
+  }
 }
 </script>

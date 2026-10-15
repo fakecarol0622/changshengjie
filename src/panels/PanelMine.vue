@@ -8,10 +8,10 @@
       </div>
       <!-- 当前加成 -->
       <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        <div class="flex justify-between"><span class="dim">可挖装备等级</span><b class="gold">Lv.{{ cur.eq.min }} ~ {{ cur.eq.max }}</b></div>
+        <div class="flex justify-between"><span class="dim">挖出装备等级 <span class="dim2">（随境界）</span></span><b class="gold">Lv.{{ eqRange.min }} ~ {{ eqRange.max }}</b></div>
         <div class="flex justify-between"><span class="dim">可挖品质区间</span><b :style="{ color: qColor(cur.q.max) }">{{ qName(cur.q.min) }} ~ {{ qName(cur.q.max) }}</b></div>
         <div class="flex justify-between"><span class="dim">挖掘出货率</span><b class="jade">+{{ cur.luck }}%</b></div>
-        <div class="flex justify-between"><span class="dim">灵脉石收益</span><b class="jade">+{{ cur.lingmaiP }}%</b></div>
+        <div class="flex justify-between"><span class="dim">开脉石收益</span><b class="jade">+{{ cur.lingmaiP }}%</b></div>
       </div>
       <div class="divider"></div>
 
@@ -38,27 +38,23 @@
         <div class="text-xs mb-1"><span class="dim">下一级（第 {{ v.lv + 1 }} 级 · {{ nextTierName }}）加成预览：</span></div>
         <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <div class="flex justify-between gap-1">
-            <span class="dim shrink-0">装备等级</span>
-            <span>Lv.{{ cur.eq.min }}~{{ cur.eq.max }} → <b class="jade">Lv.{{ next.eq.min }}~{{ next.eq.max }}</b></span>
-          </div>
-          <div class="flex justify-between gap-1">
             <span class="dim shrink-0">品质区间</span>
             <span>{{ qName(cur.q.min) }}~{{ qName(cur.q.max) }} → <b class="jade">{{ qName(next.q.min) }}~{{ qName(next.q.max) }}</b></span>
           </div>
           <div class="flex justify-between"><span class="dim">出货率</span><span>+{{ cur.luck }}% → <b class="jade">+{{ next.luck }}%</b></span></div>
-          <div class="flex justify-between"><span class="dim">灵脉石收益</span><span>+{{ cur.lingmaiP }}% → <b class="jade">+{{ next.lingmaiP }}%</b></span></div>
+          <div class="flex justify-between"><span class="dim">开脉石收益</span><span>+{{ cur.lingmaiP }}% → <b class="jade">+{{ next.lingmaiP }}%</b></span></div>
         </div>
         <div class="flex justify-between items-center text-xs mt-2">
           <span>本境挖掘进度 <b :class="digMet ? 'jade' : 'gold'">{{ Math.min(digs, digReq) }} / {{ digReq }}</b><span class="dim2">（疏通前需先在本境挖掘）</span></span>
         </div>
         <div class="pbar !h-1.5 mt-1"><div class="pfill !h-full" :style="{ width: (digReq ? Math.min(100, digs / digReq * 100) : 100) + '%' }"></div></div>
         <div class="text-xs mt-2">
-          疏通消耗：<b :class="g.res.lingshi >= upCost ? 'gold' : 'red'">灵石 {{ fmt(upCost) }}</b><span class="dim">（持有 {{ fmt(g.res.lingshi) }}）</span>
+          疏通消耗：<b :class="g.res.lingshi >= upCost ? 'gold' : 'red'">灵石 {{ fmt(upCost) }}</b><span class="dim">（持有 {{ fmt(g.res.lingshi) }}<template v-if="g.res.lingshi < upCost"> · <b class="red">还差 {{ fmt(upCost - g.res.lingshi) }}</b></template>）</span>
           · 预计耗时 <b class="gold">{{ fmtTime(upTime) }}</b>
           <span class="dim2">（后期愈发艰难，龙髓可缩短时间）</span>
         </div>
-        <button class="btn btn-gold w-full mt-2" :disabled="g.res.lingshi < upCost || !digMet" @click="g.veinStartUp()">
-          {{ digMet ? '疏 通 龙 脉' : `还需在本境挖掘 ${Math.max(0, digReq - digs)} 次` }}
+        <button class="btn w-full mt-2" :class="canUp ? 'btn-gold' : ''" :disabled="!canUp" @click="g.veinStartUp()">
+          {{ !digMet ? `还需在本境挖掘 ${Math.max(0, digReq - digs)} 次` : g.res.lingshi < upCost ? `灵石不足 · 还差 ${fmt(upCost - g.res.lingshi)}` : '疏 通 龙 脉' }}
         </button>
       </template>
       <div class="text-xs dim2 mt-2">龙髓获取：挖掘掉落 · 每日活跃宝箱 · 坊市奇货 · 问道长阶每 10 阶首通 · 脉力暴动</div>
@@ -73,14 +69,11 @@
       <div class="flex items-center gap-2 flex-wrap">
         <button
           class="btn btn-gold min-w-28"
-          :disabled="g.res.lingmai < digCost"
-          @pointerdown="holdStart"
-          @pointerup="holdEnd"
-          @pointerleave="holdEnd"
-          @pointercancel="holdEnd"
-        >挖掘 ×1（-{{ digCost }}）</button>
-        <button class="btn" :disabled="g.res.lingmai < digCost * 10" @click="g.mineAt(10)">
-          连挖 ×10（-{{ digCost * 10 }}）
+          :disabled="busy || g.res.lingmai < digCost"
+          @click="g.mineDig(1)"
+        >挖掘 ×1（耗开脉石×{{ digCost }}）</button>
+        <button class="btn" :disabled="busy || g.res.lingmai < digCost * 10" @click="g.mineDig(10)">
+          连挖 ×10（耗开脉石×{{ digCost * 10 }})
         </button>
         <div class="flex items-center gap-2 text-xs dim ml-auto">
           <span>自动挖掘</span>
@@ -88,9 +81,10 @@
         </div>
       </div>
       <div class="text-xs dim mt-1">
-        灵脉石：<b class="gold">{{ fmt(g.res.lingmai) }}</b>（+{{ fmt1(g.lingmaiPerSec) }}/秒{{ cur.lingmaiP > 0 ? `，含龙脉 +${cur.lingmaiP}%` : '' }}）
-        · 长按挖掘按钮可连续挖掘 · 脉力暴动概率 {{ surgePct }}%
+        开脉石：<b class="gold">{{ fmt(g.res.lingmai) }}</b>（+{{ fmt1(g.lingmaiPerSec) }}/秒{{ cur.lingmaiP > 0 ? `，含龙脉 +${cur.lingmaiP}%` : '' }}）
+        · 每挖一次耗开脉石 <b class="gold">{{ digCost }}</b>（龙脉越深耗得越多；挖掘本身不再产出开脉石） · 脉力暴动概率 {{ surgePct }}%
       </div>
+      <div class="text-xs dim2 mt-0.5">开脉石来源：挂机吐纳 · 副本扫荡 · 活跃宝箱 · 坊市奇货；主要去处：开凿龙脉 · 装备强化 · 分身凝练。</div>
       <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
         <div>
           <div class="flex justify-between dim"><span>小保底（120 次）</span><span>{{ pity100 }}/120</span></div>
@@ -117,13 +111,16 @@
     <div class="panel">
       <div class="panel-t">
         <span>最 近 收 获</span>
-        <button class="btn btn-xs" @click="g.discardJunk(4, 2)">清理低阶（≤玄铁2星）</button>
+        <button class="btn btn-xs" @click="g.discardJunk(4, 2)">清理低阶（≤地品2星）</button>
       </div>
       <div v-if="!g.mine.recent.length" class="dim2 text-sm">尚无收获，去挖一铲试试运气吧。</div>
       <div class="flex flex-col gap-2 max-h-96 overflow-y-auto">
         <ItemCard v-for="it in g.mine.recent" :key="it.id" :e="it" class="pop-item">
           <template #actions>
-            <button class="btn btn-xs" @click="g.equipItem(it.id)">装备</button>
+            <button
+              class="btn btn-xs" :class="wornIn(it.id) === g.clones.active ? '' : 'btn-gold'"
+              @click="wornIn(it.id) === g.clones.active ? g.unequip(it.slot) : g.equipItem(it.id)"
+            >{{ wornIn(it.id) === g.clones.active ? '卸 下' : wornIn(it.id) ? '转移装备' : '装 备' }}</button>
           </template>
         </ItemCard>
       </div>
@@ -134,12 +131,13 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import { useGame } from '../stores/game'
-import { VEIN_MAX, veinDigCost, veinDigReq, veinEqRange, veinLingmaiP, veinLuck, veinQRange, veinQualityDist, veinTier, veinUpCost, veinUpTime } from '../data/realms'
+import { VEIN_MAX, eqLevelRange, veinDigCost, veinDigReq, veinLingmaiP, veinLuck, veinQRange, veinQualityDist, veinTier, veinUpCost, veinUpTime } from '../data/realms'
 import { qColor, qName } from '../data/qualities'
 import { fmt, fmt1, fmtTime } from '../core/format'
 import ItemCard from '../components/ItemCard.vue'
 
 const g = useGame()
+function wornIn(id: number): 'main' | 'yang' | 'yin' | null { return g.wornBodyOf(id) }
 const tide = computed(() => g.activity?.id === 'tide')
 const v = computed(() => g.vein)
 const tierName = computed(() => veinTier(v.value.lv))
@@ -150,13 +148,16 @@ const upTime = computed(() => veinUpTime(v.value.lv))
 const digReq = computed(() => veinDigReq(v.value.lv))
 const digs = computed(() => v.value.digs || 0)
 const digMet = computed(() => digs.value >= digReq.value)
+const canUp = computed(() => digMet.value && g.res.lingshi >= upCost.value)
 const longsui = computed(() => g.mats['longsui'] || 0)
 const pity100 = computed(() => g.mine.pity100['v'] || 0)
 const pity500 = computed(() => g.mine.pity500['v'] || 0)
+const eqRange = computed(() => eqLevelRange(g.lv))
+const busy = computed(() => !!g.mineBusy)
 
-interface VeinSnap { eq: { min: number; max: number }; q: { min: number; max: number }; luck: number; lingmaiP: number }
+interface VeinSnap { q: { min: number; max: number }; luck: number; lingmaiP: number }
 function snap(lv: number): VeinSnap {
-  return { eq: veinEqRange(lv), q: veinQRange(lv), luck: veinLuck(lv), lingmaiP: veinLingmaiP(lv) }
+  return { q: veinQRange(lv), luck: veinLuck(lv), lingmaiP: veinLingmaiP(lv) }
 }
 const cur = computed<VeinSnap>(() => snap(v.value.lv))
 const next = computed<VeinSnap>(() => snap(Math.min(VEIN_MAX, v.value.lv + 1)))
@@ -180,18 +181,4 @@ const surgePct = computed(() => {
   const base = 3 * (tide.value ? 2 : 1) * (1 + g.attrs.qiYun * 0.005)
   return (Math.round(base * 10) / 10).toFixed(1)
 })
-
-let holdTimer: number | null = null
-function holdStart() {
-  g.mineAt(1)
-  holdEnd()
-  holdTimer = window.setInterval(() => {
-    if (g.res.lingmai < digCost.value) { holdEnd(); return }
-    g.mineAt(1, true)
-  }, 450)
-}
-function holdEnd() {
-  if (holdTimer != null) { clearInterval(holdTimer); holdTimer = null }
-}
-onUnmounted(holdEnd)
 </script>

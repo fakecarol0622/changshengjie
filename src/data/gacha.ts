@@ -22,7 +22,7 @@ interface PoolEntry { w: number; n: string; d: string; grant: GachaGrant }
 const STD: Record<number, PoolEntry[]> = {
   1: [
     { w: 1, n: '灵石袋', d: '大量灵石（随境界）', grant: { t: 'dynres', id: 'lingshi' } },
-    { w: 1, n: '灵脉石 ×10', d: '灵脉挖掘消耗', grant: { t: 'res', id: 'lingmai', n: 10 } },
+    { w: 1, n: '开脉石 ×10', d: '开凿龙脉消耗', grant: { t: 'res', id: 'lingmai', n: 10 } },
     { w: 1, n: '洗练石 ×2', d: '重铸词条数值', grant: { t: 'res', id: 'xilian', n: 2 } },
     { w: 1, n: '共鸣石 ×2', d: '重铸词条类型', grant: { t: 'res', id: 'gongming', n: 2 } },
   ],
@@ -83,7 +83,7 @@ export function nextRotateAt(now = Date.now()): number {
 function tierEntries(pool: 'std' | 'lim', r: number): PoolEntry[] {
   if (pool === 'lim') {
     const banner = LIM_BANNERS[bannerIndex()]
-    if (r === 4) return [{ w: 3, n: banner.legend.n, d: banner.legend.d, grant: banner.legend.grant }, { w: 1, ...STD[4][0] }, { w: 1, ...STD[4][1] }]
+    if (r === 4) return [{ w: 3, n: banner.legend.n, d: banner.legend.d, grant: banner.legend.grant }, { ...STD[4][0], w: 1 }, { ...STD[4][1], w: 1 }]
     if (r === 3) return [...STD[3], { w: 0.6, n: banner.sub, d: '限定主题奖励（仙玉×60）', grant: { t: 'res', id: 'xianyu', n: 60 } }]
   }
   return STD[r]

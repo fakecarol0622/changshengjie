@@ -1,5 +1,5 @@
 // ===== 装备生成 / 属性推导 / 共鸣判定 =====
-import type { AffixRoll, Beast, Equip, Familiar, Mods, Proc, SlotKey, Stats, Technique, Treasure } from '../types'
+import type { AffixRoll, Beast, Eff, Equip, Familiar, Mods, Proc, SlotKey, Stats, Technique, Treasure } from '../types'
 import {
   AFFIX_MAP, affixPoolFor, BODY_BASES, PREFIX_TAGS, QUALITIES, RUNES, SLOT_BASES, SLOTS,
   STAR_W, SWORD_BASES, drawPrefix, nameFor, scoreEquip,
@@ -26,6 +26,7 @@ export function emptyStats(): Stats {
     reviveCount: 0, revivePct: 0, tribBonus: 0,
     dropLuck: 0, starFloor: 0, pillBonus: 0, treasureBonus: 0, beastBonus: 0,
     stun: 0, counter: 0, resistStun: 0, resistCrit: 0, resistCombo: 0, resistCounter: 0, resistLifesteal: 0,
+    dmgBoost: 0, healBoost: 0, healCut: 0, beastBoost: 0, beastCut: 0,
   }
 }
 
@@ -59,6 +60,11 @@ export function applyMods(s: Stats, m: Mods, scale = 1): void {
     const v = f(m.resistAllAdd)
     s.resistStun += v; s.resistCrit += v; s.resistCombo += v; s.resistCounter += v; s.resistLifesteal += v
   }
+  if (m.dmgBoostAdd) s.dmgBoost += f(m.dmgBoostAdd)
+  if (m.healBoostAdd) s.healBoost += f(m.healBoostAdd)
+  if (m.healCutAdd) s.healCut += f(m.healCutAdd)
+  if (m.beastBoostAdd) s.beastBoost += f(m.beastBoostAdd)
+  if (m.beastCutAdd) s.beastCut += f(m.beastCutAdd)
 }
 
 // ===== 装备生成 =====
@@ -71,10 +77,10 @@ export function rollAffixValue(k: string, q: number, stars: number, lv: number):
   if (k === 'reincarnate') return ri(1, 3)
   const qm = 1 + 0.38 * (q - 1)
   const sm = 1 + 0.3 * (stars - 1)
-  if (def.flat === 'atk') return Math.max(1, Math.round(roll * 0.55 * Math.pow(1.48, lv) * qm * sm))
-  if (def.flat === 'def') return Math.max(1, Math.round(roll * 0.48 * Math.pow(1.48, lv) * qm * sm))
-  if (def.flat === 'hp') return Math.max(1, Math.round(roll * 0.7 * Math.pow(1.52, lv) * qm * sm))
-  if (def.flat === 'spd') return Math.max(1, Math.round(roll * (1 + lv * 0.05) * (1 + 0.08 * (q - 1))))
+  if (def.flat === 'atk') return Math.max(1, Math.round(roll * 0.55 * Math.pow(1.03644, lv) * qm * sm))
+  if (def.flat === 'def') return Math.max(1, Math.round(roll * 0.48 * Math.pow(1.03644, lv) * qm * sm))
+  if (def.flat === 'hp') return Math.max(1, Math.round(roll * 0.7 * Math.pow(1.03897, lv) * qm * sm))
+  if (def.flat === 'spd') return Math.max(1, Math.round(roll * (1 + lv * 0.00457) * (1 + 0.08 * (q - 1))))
   return Math.round(roll * (1 + 0.06 * (q - 1)) * 10) / 10
 }
 
@@ -92,8 +98,13 @@ export function genEquip(lv: number, qmin: number, qmax: number, opts: { slot?: 
   const q = opts.q ?? rollQuality(qmin, qmax)
   const slot = opts.slot ?? pick(SLOTS)
   const stars = Math.max(weighted(STAR_W.map((w, i) => ({ w, v: i + 1 }))), 1)
-  const base = pick(SLOT_BASES[slot])
+  let base = pick(SLOT_BASES[slot])
   const prefix = drawPrefix(q)
+  // 避免「青锋·锋」「天罡·罡」这类同名尾字撞车
+  if (prefix.endsWith(base)) {
+    const alt = SLOT_BASES[slot].filter(b => !prefix.endsWith(b))
+    if (alt.length) base = pick(alt)
+  }
   const name = opts.name ?? nameFor(q, base, prefix)
   const nAff = QUALITIES[q - 1].aff
   const pool = affixPoolFor(q).slice()
@@ -140,9 +151,40 @@ export function genEquip(lv: number, qmin: number, qmax: number, opts: { slot?: 
   return equ
 }
 
+// 缩放 proc 效果数值（精怪战斗技随成长）
+function scaleProcEff(eff: Eff, f: number): Eff {
+  if (f === 1) return eff
+  const e = { ...eff } as { mult?: number; pct?: number } & Eff
+  if (typeof e.mult === 'number') e.mult = Math.round(e.mult * f * 100) / 100
+  if (typeof e.pct === 'number') e.pct = Math.round(e.pct * f * 10) / 10
+  return e
+}
+
+// 技能效果文字（供 UI 展示具体作用）
+export function procEffectText(p: Proc): string {
+  const e = p.eff as { t: string; mult?: number; pct?: number; rounds?: number; name?: string }
+  switch (e.t) {
+    case 'dmg': return `造成 ${Math.round((e.mult || 1) * 100)}% 攻击伤害`
+    case 'true': return `造成 ${Math.round((e.mult || 1) * 100)}% 攻击真实伤害`
+    case 'heal': return `回复 ${e.pct}% 气血`
+    case 'shield': return `获得 ${e.pct}% 气血护盾`
+    case 'dot': return `${e.name || '持续伤害'}（${e.rounds}回合·每回合${e.pct}%）`
+    case 'stun': return `击晕目标 ${e.rounds} 回合`
+    case 'atkBuff': return `攻击 +${e.pct}%（${e.rounds}回合）`
+    case 'defDown': return `破防 ${e.pct}%（${e.rounds}回合）`
+    case 'immune': return '免疫下一次负面效果'
+    case 'revive': return `阵亡后以 ${e.pct}% 气血复活`
+    case 'extraHit': return `追加一击（${Math.round((e.mult || 1) * 100)}% 攻击）`
+    case 'lord': return '随机获得一项顶级词条效果'
+    case 'selfHp': return (e.pct || 0) < 0 ? `自损 ${-(e.pct || 0)}% 气血` : `回复 ${e.pct}% 气血`
+    default: return p.desc
+  }
+}
+
 // ===== 推导上下文与总属性 =====
 export interface DeriveCtx {
   major: number
+  phase: number
   minor: number
   attrs: Record<string, number>
   equipped: Equip[]
@@ -173,14 +215,20 @@ export function calcPower(s: Stats, activeCount: number): number {
   let p = s.atk * 10 + s.def * 6 + s.hp * 0.9 + s.spd * 6
   p *= 1 + (s.crit + s.critDmg + s.combo) / 150 + s.lifesteal / 80 + s.dmgReduce / 120 + s.armorPen / 150 + s.dmgP / 120
     + (s.stun + s.counter) / 250
+    + (s.dodge || 0) / 250 + (s.execute || 0) / 180
     + (s.resistStun + s.resistCrit + s.resistCombo + s.resistCounter + s.resistLifesteal) / 600
+    + ((s.dmgBoost || 0) + (s.healBoost || 0) + (s.beastBoost || 0)) / 220
+    + ((s.healCut || 0) + (s.beastCut || 0)) / 280
+    // 第23批：补齐原先不计入战力的词条（闪避/命中/斩杀/道韵/劫火/护盾/吞噬/反伤/冷却/灵气回复），与评分口径对齐
+    + (s.shield || 0) / 250 + (s.devour || 0) / 250 + (s.reflect || 0) / 300 + (s.cdr || 0) / 300 + (s.qiRegen || 0) / 300 + (s.hit || 0) / 400
+    + (s.daoyun || 0) / 80 + (s.kalpaFire || 0) / 130
   p *= 1 + activeCount * 0.04
   return Math.round(p)
 }
 
 export function derive(ctx: DeriveCtx): Derived {
   const s = emptyStats()
-  const lv = lvIndex(ctx.major, ctx.minor)
+  const lv = lvIndex(ctx.major, ctx.phase, ctx.minor)
   s.hp = baseHp(lv)
   s.atk = baseAtk(lv)
   s.def = baseDef(lv)
@@ -231,6 +279,11 @@ export function derive(ctx: DeriveCtx): Derived {
         case 'resistCombo': s.resistCombo += av; break
         case 'resistCounter': s.resistCounter += av; break
         case 'resistLifesteal': s.resistLifesteal += av; break
+        case 'dmgBoost': s.dmgBoost += av; break
+        case 'healBoost': s.healBoost += av; break
+        case 'healCut': s.healCut += av; break
+        case 'beastBoost': s.beastBoost += av; break
+        case 'beastCut': s.beastCut += av; break
       }
     }
     if (e.rune) {
@@ -262,7 +315,7 @@ export function derive(ctx: DeriveCtx): Derived {
       const growth = ctx.beast.growth ?? 1
       const scale = (1 + (ctx.beast.q - 1) * 0.06) * (1 + (ctx.beast.level - 1) * 0.05) * (1 + stage * 0.2) * (1 + s.beastBonus / 100) * growth
       if (bd.mods) applyMods(s, bd.mods, scale)
-      if (bd.procs) for (const p of bd.procs) procs.push({ ...p, chance: Math.min(1, p.chance * Math.min(2, scale)) })
+      if (bd.procs) for (const p of bd.procs) procs.push({ ...p, src: 'pet', chance: Math.min(1, p.chance * Math.min(2, scale)) })
       // 随机资质：攻击/防御/气血/速度 资质各 +0.12%/点
       const q = ctx.beast.qual
       if (q) {
@@ -273,7 +326,7 @@ export function derive(ctx: DeriveCtx): Derived {
       // 阶位解锁助战技
       for (let i = 0; i < stage && i < BEAST_STAGE_SKILLS.length; i++) {
         const sk = BEAST_STAGE_SKILLS[i]
-        procs.push({ ...sk, chance: Math.min(1, sk.chance * Math.min(2, scale)) })
+        procs.push({ ...sk, src: 'pet', chance: Math.min(1, sk.chance * Math.min(2, scale)) })
       }
     }
   }
@@ -301,10 +354,20 @@ export function derive(ctx: DeriveCtx): Derived {
     procs.push({ id: 'sancai', name: '三才共鸣', trigger: 'start', chance: 1, desc: '三件同品质法宝，全属性+20%', eff: { t: 'heal', pct: 0 } })
   }
 
-  // —— 精怪（出战位被动加成） ——
+  // —— 精怪（出战位被动加成 + 战斗技自动触发） ——
   for (const f of ctx.fams) {
     const fd = FAM_MAP[f.fid]
-    if (fd?.mods) applyMods(s, fd.mods, famScale(f.level, f.stars))
+    if (!fd) continue
+    const fsc = famScale(f.level, f.stars)
+    if (fd.mods) applyMods(s, fd.mods, fsc)
+    if (fd.proc) {
+      const pf = 1 + (Math.min(2, fsc) - 1) * 0.5 // 战斗技强度随等级/星级温和成长
+      procs.push({
+        ...fd.proc,
+        chance: Math.min(0.85, fd.proc.chance * Math.min(1.5, fsc)),
+        eff: scaleProcEff(fd.proc.eff, pf),
+      })
+    }
   }
 
   // —— 收集达成加成（图鉴收集永久增益） ——

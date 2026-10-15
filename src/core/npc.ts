@@ -1,7 +1,7 @@
 // ===== NPC 模拟：成长 / 战力 / 境界 =====
 import type { Npc } from '../types'
 import { NPC_DEFS } from '../data/npcs'
-import { MAJOR, MINOR, baseAtk, baseDef, baseHp } from '../data/realms'
+import { baseAtk, baseDef, baseHp, realmName } from '../data/realms'
 import { pick, rnd } from './rng'
 
 export function makeNpcs(): Npc[] {
@@ -12,7 +12,8 @@ export function makeNpcs(): Npc[] {
     sect: d.sect,
     align: d.align,
     flavor: d.flavor,
-    level: d.baseLv + rnd() * 0.6,
+    // baseLv 为旧 44 级标尺数值 → 换算到新 440 级标尺（×10.14）
+    level: d.baseLv * 10.14 + rnd() * 6,
     growth: d.growth,
     favor: 0,
     hate: 0,
@@ -21,30 +22,32 @@ export function makeNpcs(): Npc[] {
   }))
 }
 
-export function npcRealm(n: Npc): { major: number; minor: number; name: string } {
-  const lv = Math.max(0, Math.floor(n.level))
-  const major = Math.min(10, Math.floor(lv / 4))
-  const minor = lv % 4
-  if (major === 0 && minor === 0) return { major, minor, name: '凡人' }
-  return { major, minor, name: MAJOR[major] + MINOR[minor] }
+export function npcRealm(n: Npc): { major: number; phase: number; minor: number; name: string } {
+  const lv = Math.max(0, Math.min(439, Math.floor(n.level)))
+  const major = Math.min(10, Math.floor(lv / 40))
+  const rem = lv % 40
+  const phase = Math.floor(rem / 10)
+  const minor = rem % 10
+  if (lv === 0) return { major, phase, minor, name: '凡人' }
+  return { major, phase, minor, name: realmName(major, phase, minor) }
 }
 
 export function npcPower(n: Npc): number {
   const lv = Math.max(0, Math.floor(n.level))
   const noise = 0.9 + ((n.id * 37) % 25) / 100 // 稳定人格化扰动 0.9~1.14
   // 传承系数：随境界成长并封顶（凡人≈2.6 → 仙人≈4.2），保证高境界 NPC 稳压低境界玩家
-  const gear = 2.4 + Math.min(1.4, lv * 0.06) + ((n.id * 53) % 40) / 100
+  const gear = 2.4 + Math.min(1.4, lv * 0.006) + ((n.id * 53) % 40) / 100
   const raw = baseAtk(lv) * 10 + baseDef(lv) * 6 + baseHp(lv) * 0.9
   return Math.round(raw * gear * noise)
 }
 
-// NPC 随时间成长（专注修炼折算）：约 10 分钟一级，高境界成长放缓，离线同样生效
+// NPC 随时间成长（专注修炼折算）：约 10 分钟一级（440 标尺上更快），高境界成长放缓，离线同样生效
 export function growNpcs(npcs: Npc[], dtSec: number): void {
-  const units = dtSec / 600
+  const units = dtSec / 150
   for (const n of npcs) {
-    const slow = 1 - Math.min(0.8, n.level / 62)
-    const gain = (units * n.growth * 1.05 * slow) / (1 + n.level / 42)
-    n.level = Math.min(48, n.level + gain)
+    const slow = 1 - Math.min(0.8, n.level / 628)
+    const gain = (units * n.growth * 1.05 * slow) / (1 + n.level / 424)
+    n.level = Math.min(488, n.level + gain)
   }
 }
 
@@ -62,7 +65,7 @@ export function makeRival(lv: number, id: number): Npc {
     sect: pick(RIVAL_SECT),
     align: pick(['正', '魔', '中'] as const),
     flavor: pick(['剑修', '丹修', '魔修', '体修', '御兽', '阵修', '符修', '琴修']),
-    level: Math.min(48, lv + 3 + Math.floor(rnd() * 6)),
+    level: Math.min(488, lv + 32 + Math.floor(rnd() * 60)),
     growth: 0.95 + rnd() * 0.2,
     favor: 0,
     hate: 0,

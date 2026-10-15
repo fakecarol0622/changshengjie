@@ -19,22 +19,24 @@ export const SECTS: SectDef[] = [
 ]
 export const SECT_MAP: Record<string, SectDef> = Object.fromEntries(SECTS.map(s => [s.id, s]))
 
-export interface RankDef { n: string; contrib: number; realm: number; disc: number }
+export interface RankDef { n: string; contrib: number; realm: number; phase: number; tenure: number; disc: number }
+// 第20批：晋升三门槛 —— 贡献 + 境界（含小境界）+ 任期（天）；宗门任务/突破后自动触发考核
+// 说明：贡献收入随职位提升（任务×1+0.8×职位），境界与任期才是真正的硬门槛
 export const RANKS: RankDef[] = [
-  { n: '杂役弟子', contrib: 0, realm: 0, disc: 1 },
-  { n: '外门弟子', contrib: 100, realm: 0, disc: 0.95 },
-  { n: '内门弟子', contrib: 500, realm: 2, disc: 0.9 },
-  { n: '真传弟子', contrib: 2000, realm: 3, disc: 0.85 },
-  { n: '核心弟子', contrib: 8000, realm: 4, disc: 0.8 },
-  { n: '长老', contrib: 30000, realm: 5, disc: 0.7 },
-  { n: '峰主', contrib: 100000, realm: 6, disc: 0.6 },
-  { n: '掌门', contrib: 500000, realm: 7, disc: 0.5 },
+  { n: '杂役弟子', contrib: 0, realm: 0, phase: 0, tenure: 0, disc: 1 },
+  { n: '外门弟子', contrib: 300, realm: 0, phase: 1, tenure: 1, disc: 0.95 },
+  { n: '内门弟子', contrib: 1200, realm: 1, phase: 2, tenure: 1, disc: 0.9 },
+  { n: '真传弟子', contrib: 4000, realm: 2, phase: 2, tenure: 2, disc: 0.85 },
+  { n: '核心弟子', contrib: 12000, realm: 3, phase: 2, tenure: 3, disc: 0.8 },
+  { n: '长老', contrib: 40000, realm: 5, phase: 0, tenure: 4, disc: 0.7 },
+  { n: '峰主', contrib: 150000, realm: 7, phase: 0, tenure: 5, disc: 0.6 },
+  { n: '掌门', contrib: 600000, realm: 9, phase: 0, tenure: 7, disc: 0.5 },
 ]
 
 // 宗门商店（贡献兑换）
 export interface SectShopItem { id: string; n: string; price: number; kind: string; amount: number; minRank: number }
 export const SECT_SHOP: SectShopItem[] = [
-  { id: 's_lingmai', n: '灵脉石×30', price: 60, kind: 'lingmai', amount: 30, minRank: 0 },
+  { id: 's_lingmai', n: '开脉石×30', price: 60, kind: 'lingmai', amount: 30, minRank: 0 },
   { id: 's_lingshi', n: '灵石×2000', price: 50, kind: 'lingshi', amount: 2000, minRank: 0 },
   { id: 's_xilian', n: '洗练石×5', price: 120, kind: 'xilian', amount: 5, minRank: 1 },
   { id: 's_gongming', n: '共鸣石×5', price: 120, kind: 'gongming', amount: 5, minRank: 1 },

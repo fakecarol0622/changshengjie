@@ -39,8 +39,24 @@ export const MATERIALS: MatDef[] = [
   { id: 'qinpu', n: '古琴谱', type: 'gift', desc: '失传的上古琴曲谱（喜好：乐）' },
   { id: 'minghua', n: '名家画轴', type: 'gift', desc: '仙家真迹画轴（喜好：书画）' },
   { id: 'yupei', n: '玲珑玉佩', type: 'gift', desc: '温润灵玉所制配饰（喜好：珍宝）' },
-  { id: 'xianglu', n: '沉云香炉', type: 'gift', desc: '燃之静心凝神的古香炉（喜好：香）' },
-]
+  { id: 'xianglu', n: '沉云香炉', type: 'gift', desc: '燃之静心凝神的古香炉（喜好：香）' },  { id: 'xueya', n: '雪芽仙毫', type: 'gift', desc: '千年雪顶采的仙茶（喜好：茶）' },
+  { id: 'wudao', n: '悟道茶', type: 'gift', desc: '饮之可入定悟道的灵茶（喜好：茶）' },
+  { id: 'yunwu', n: '云雾仙芽', type: 'gift', desc: '云海深处孕育的茶中极品（喜好：茶）' },
+  { id: 'zuixian', n: '醉仙酿', type: 'gift', desc: '仙人闻香亦醉的百年陈酿（喜好：酒）' },
+  { id: 'taiqing', n: '太清玉液', type: 'gift', desc: '道门秘传的玉液琼浆（喜好：酒）' },
+  { id: 'wangyou', n: '忘忧醴泉', type: 'gift', desc: '一饮可忘百年忧的灵泉（喜好：酒）' },
+  { id: 'shanhe', n: '山河真迹', type: 'gift', desc: '画圣亲笔的山河长卷（喜好：书画）' },
+  { id: 'wuzi', n: '无字天书', type: 'gift', desc: '观之字字浮现的通玄天书（喜好：书画）' },
+  { id: 'luoshenfu', n: '洛神赋残卷', type: 'gift', desc: '前朝大家的真迹残卷（喜好：书画）' },
+  { id: 'qilinyin', n: '紫金麒麟印', type: 'gift', desc: '紫金铸就的镇宅宝印（喜好：珍宝）' },
+  { id: 'jiuqiao', n: '九窍玲珑珠', type: 'gift', desc: '九窍生辉的奇珠（喜好：珍宝）' },
+  { id: 'kunwu', n: '昆吾玉璧', type: 'gift', desc: '昆吾山巅采得的古玉璧（喜好：珍宝）' },
+  { id: 'anxin', n: '安神龙涎香', type: 'gift', desc: '一缕可安神三日的龙涎香（喜好：香）' },
+  { id: 'ningshen', n: '凝神返魂香', type: 'gift', desc: '古方所制凝神奇香（喜好：香）' },
+  { id: 'tianxiang', n: '九天神木香', type: 'gift', desc: '神木心材所制，燃之通玄（喜好：香）' },
+  { id: 'guangling', n: '广陵散残谱', type: 'gift', desc: '失传名曲的古谱残页（喜好：乐）' },
+  { id: 'tianyin', n: '天音玉笛', type: 'gift', desc: '玉笛一响百鸟朝凤（喜好：乐）' },
+  { id: 'fengming', n: '凤鸣焦尾琴', type: 'gift', desc: '琴身有凤鸣九霄之音（喜好：乐）' },]
 export const MAT_MAP: Record<string, MatDef> = Object.fromEntries(MATERIALS.map(m => [m.id, m]))
 
 // ---------- 丹药 ----------
@@ -144,6 +160,12 @@ export const TREASURES: TreasureDef[] = [
   { id: 'yujingping', n: '玉净瓶', q: 10, desc: '每回合回复3%气血', procs: [PR('tr_yujing', '玉净甘露', 'round', 1, { t: 'heal', pct: 3 }, '甘露润体')] },
   { id: 'huntianling', n: '混天绫', q: 12, desc: '连击+12%', mods: { comboAdd: 12 } },
   { id: 'qiankundai', n: '乾坤袋', q: 10, desc: '挖掘出货率+8%', mods: { dropLuck: 8 } },
+  { id: 'panlongzhang', n: '蟠龙杖', q: 11, desc: '强化灵兽+15%，气血+10%', mods: { beastBoostAdd: 15, hpP: 10 } },
+  { id: 'zhenhunfan', n: '镇魂幡', q: 12, desc: '击晕+6%，20%概率摄魂麻痹', mods: { stunAdd: 6 }, procs: [PR('tr_zhenhun', '摄魂', 'attack', 0.2, { t: 'stun', rounds: 1 }, '魂幡招展，神魂一滞')] },
+  { id: 'jingangzhuo', n: '金刚琢', q: 12, desc: '反击+8%，受击时35%反震', mods: { counterAdd: 8 }, procs: [PR('tr_jingang', '金刚反震', 'hit', 0.35, { t: 'dmg', mult: 0.5 }, '金刚琢震，反噬其身')] },
+  { id: 'jiuyouling', n: '九幽令', q: 12, desc: '弱化治疗+10%，破甲+8%', mods: { healCutAdd: 10, armorPenAdd: 8 } },
+  { id: 'fuyaozhou', n: '扶摇舟', q: 11, desc: '速度+20%，闪避+6%', mods: { spdP: 20, dodgeAdd: 6 } },
+  { id: 'taixujing', n: '太虚镜', q: 12, desc: '增伤+8%，暴击+5%', mods: { dmgBoostAdd: 8, critAdd: 5 } },
 ]
 export const TREASURE_MAP: Record<string, TreasureDef> = Object.fromEntries(TREASURES.map(t => [t.id, t]))
 // 法宝组合共鸣
@@ -152,6 +174,11 @@ export const TREASURE_COMBOS: { ids: [string, string]; n: string; desc: string; 
   { ids: ['bingpojing', 'shuilongzhu'], n: '寒龙共鸣', desc: '防御+15%、气血+10%', mods: { defP: 15, hpP: 10 } },
   { ids: ['yuehualun', 'rijinglun'], n: '日月同辉', desc: '暴击伤害+20%', mods: { critDmgAdd: 20 } },
   { ids: ['xuemoDao', 'youmingdeng'], n: '幽冥血契', desc: '吸血+10%、伤害+10%', mods: { lifestealAdd: 10, dmgP: 10 } },
+  { ids: ['zhenhunfan', 'youmingdeng'], n: '幽冥引魂', desc: '强化灵兽+10%、弱化治疗+8%', mods: { beastBoostAdd: 10, healCutAdd: 8 } },
+  { ids: ['jingangzhuo', 'xuangui_dun'], n: '金刚不坏', desc: '反击+6%、减伤+5%', mods: { counterAdd: 6, dmgReduceAdd: 5 } },
+  { ids: ['panlongzhang', 'jinjiao'], n: '龙蛟合璧', desc: '强化灵兽+8%、破甲+6%', mods: { beastBoostAdd: 8, armorPenAdd: 6 } },
+  { ids: ['fuyaozhou', 'fenglingfan'], n: '扶摇御风', desc: '速度+15%、闪避+5%', mods: { spdP: 15, dodgeAdd: 5 } },
+  { ids: ['taixujing', 'xingchenpan'], n: '太虚星象', desc: '增伤+6%、全属性+4%', mods: { dmgBoostAdd: 6, allP: 4 } },
 ]
 
 // ---------- 灵兽 ----------

@@ -14,7 +14,7 @@ export type RewardItem =
   | { t: 'equip'; qmin: number; qmax: number }
 
 export const RES_LABEL: Record<string, string> = {
-  lingshi: '灵石', lingmai: '灵脉石', xianyu: '仙玉', xilian: '洗练石',
+  lingshi: '灵石', lingmai: '开脉石', xianyu: '仙玉', xilian: '洗练石',
   gongming: '共鸣石', sweep: '扫荡券', auction: '拍卖令', qihun: '器魂', contrib: '贡献',
   pvpTicket: '论道帖', gaiming: '改命石', jianling: '剑冢令', xingyun: '星陨石', xianwu: '仙武积分',
   gachaTicket: '寻仙令',
@@ -106,16 +106,16 @@ export interface XianyuSku {
 }
 export const XY_SKUS: XianyuSku[] = [
   { id: 'lingshi_bag', n: '灵石袋', desc: '大量灵石，随境界提升', cost: 10, limit: 5, dynRes: 'lingshi' },
-  { id: 'lingmai_bag', n: '灵脉石袋', desc: '灵脉石，随境界提升', cost: 15, limit: 3, dynRes: 'lingmai' },
+  { id: 'lingmai_bag', n: '开脉石袋', desc: '开脉石，随境界提升', cost: 15, limit: 3, dynRes: 'lingmai' },
   { id: 'sweep5', n: '扫荡券 ×5', desc: '副本扫荡消耗', cost: 20, limit: 3, resId: 'sweep', amount: 5 },
   { id: 'xilian5', n: '洗练石 ×5', desc: '重铸装备词条数值', cost: 15, limit: 3, resId: 'xilian', amount: 5 },
   { id: 'gongming5', n: '共鸣石 ×5', desc: '重铸词条类型', cost: 15, limit: 3, resId: 'gongming', amount: 5 },
-  { id: 'podan1', n: '破障丹 ×1（灵胚）', desc: '突破成功率 +12%', cost: 30, limit: 2, pillId: 'podan', pillQ: 2 },
+  { id: 'podan1', n: '破障丹 ×1（中品）', desc: '突破成功率 +12%', cost: 30, limit: 2, pillId: 'podan', pillQ: 2 },
   { id: 'auction1', n: '拍卖令 ×1', desc: '在拍卖会发起拍卖', cost: 40, limit: 1, resId: 'auction', amount: 1 },
 ]
 export const XY_DYN: Record<string, (lv: number) => number> = {
-  lingshi: lv => Math.round(2500 * Math.pow(1.32, lv)),
-  lingmai: lv => Math.round(300 * Math.pow(1.16, lv)),
+  lingshi: lv => Math.round(2500 * Math.pow(1.02782, lv)),
+  lingmai: lv => Math.round(300 * Math.pow(1.01467, lv)),
 }
 
 // —— 模拟充值礼包（单机演示：点击即模拟支付成功，无真实扣费） ——
@@ -126,7 +126,7 @@ export interface PayPack {
 }
 export const PAY_PACKS: PayPack[] = [
   { id: 'mk', rmb: 30, n: 300, kind: 'month', bonus: '月卡：立即得 300 仙玉，30 天内每日可领 100 仙玉' },
-  { id: 'prem', rmb: 68, n: 0, kind: 'pass', bonus: '解锁修行战令「豪华奖励线」（本赛季有效）· 每级仙玉/灵脉石/洗练石逐级递增、逢5级加共鸣石/改命石/论道帖、逢10级加寻仙令，送灵兽蛋/龙髓/兽魂/妖珠，30级送 15~16 品装备 + 仙玉×1288 + 太古兽卵' },
+  { id: 'prem', rmb: 68, n: 0, kind: 'pass', bonus: '解锁修行战令「豪华奖励线」（本赛季有效）· 每级仙玉/开脉石/洗练石逐级递增、逢5级加共鸣石/改命石/论道帖、逢10级加寻仙令，送灵兽蛋/龙髓/兽魂/妖珠，30级送 15~16 品装备 + 仙玉×1288 + 太古兽卵' },
   { id: 'p6', rmb: 6, n: 60, first: true },
   { id: 'p30', rmb: 30, n: 330, first: true },
   { id: 'p98', rmb: 98, n: 1180, first: true },

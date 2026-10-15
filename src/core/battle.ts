@@ -38,6 +38,20 @@ function atkOf(st: SideState): number {
   return a
 }
 
+// 治疗效果系数：己方强化治疗 × 敌方弱化治疗
+function healFactor(src: SideState, enemy: SideState): number {
+  return (1 + (src.s.healBoost || 0) / 100) * (1 - Math.min(0.8, (enemy.s.healCut || 0) / 100))
+}
+
+// 按系数缩放 proc 效果数值（灵兽强化/弱化用）
+function scaleEff(eff: Eff, f: number): Eff {
+  if (f === 1) return eff
+  const e = { ...eff } as { mult?: number; pct?: number } & Eff
+  if (typeof e.mult === 'number') e.mult = Math.round(e.mult * f * 100) / 100
+  if (typeof e.pct === 'number') e.pct = Math.round(e.pct * f * 10) / 10
+  return e
+}
+
 function applyEff(src: SideState, dst: SideState, eff: Eff, log: LogLine[], procName: string) {
   switch (eff.t) {
     case 'dmg': {
@@ -53,7 +67,7 @@ function applyEff(src: SideState, dst: SideState, eff: Eff, log: LogLine[], proc
       break
     }
     case 'heal': {
-      const amt = Math.round(src.s.hp * eff.pct / 100)
+      const amt = Math.round(src.s.hp * eff.pct / 100 * healFactor(src, dst))
       src.hp = Math.min(src.s.hp, src.hp + amt)
       log.push({ t: `  ${procName}：回复 ${fmt(amt)} 气血`, c: 'l-heal' })
       break
@@ -61,7 +75,7 @@ function applyEff(src: SideState, dst: SideState, eff: Eff, log: LogLine[], proc
     case 'selfHp': {
       if (eff.pct >= 0) {
         if (chance(0.5)) {
-          const amt = Math.round(src.s.hp * eff.pct / 100)
+          const amt = Math.round(src.s.hp * eff.pct / 100 * healFactor(src, dst))
           src.hp = Math.min(src.s.hp, src.hp + amt)
           log.push({ t: `  ${procName}：阴阳相济，回复 ${fmt(amt)} 气血`, c: 'l-heal' })
         } else {
@@ -159,11 +173,18 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
     for (const p of st.c.procs) {
       if (p.trigger !== trigger) continue
       if (p.bossOnly && !opts.boss) continue
-      const ch = Math.min(1, p.chance * (1 + st.s.cdr / 100))
+      let eff = p.eff
+      let ch = Math.min(1, p.chance * (1 + st.s.cdr / 100))
+      if (p.src === 'pet') {
+        // 灵兽/精怪技能：受己方强化灵兽 +% 与敌方弱化灵兽 -% 影响
+        const pf = (1 + (st.s.beastBoost || 0) / 100) * (1 - Math.min(0.6, (enemy.s.beastCut || 0) / 100))
+        ch *= pf
+        eff = scaleEff(p.eff, pf)
+      }
       if (trigger !== 'start' && trigger !== 'round' && !chance(ch)) continue
       if (trigger === 'round' && !chance(ch)) continue
       if (trigger === 'start' && !chance(ch)) continue
-      applyEff(st, enemy, p.eff, log, `「${p.name}」`)
+      applyEff(st, enemy, eff, log, `「${p.name}」`)
     }
   }
 
@@ -204,7 +225,7 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
     dmg *= 1 - mitig
     // 伤害减免
     dmg *= 1 - Math.min(0.8, def.s.dmgReduce / 100)
-    dmg *= 1 + atk.s.dmgP / 100
+    dmg *= 1 + (atk.s.dmgP + (atk.s.dmgBoost || 0)) / 100
     // 完全免疫
     if (def.s.immuneChance > 0 && chance(def.s.immuneChance / 100)) {
       log.push({ t: `「龟息·御」${def.c.name} 完全免疫了这次伤害`, c: 'l-proc' })
@@ -217,10 +238,10 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
       t: `${atk.c.name} 出手${combo ? '（连击！）' : ''}，对 ${def.c.name} 造成 ${fmt(final)} 伤害${isCrit ? '（暴击！）' : ''}${tag}${isTrue ? '（真实伤害）' : ''}`,
       c: isCrit ? 'l-crit' : 'l-dmg',
     })
-    // 吸血（受抗吸血减免）
+    // 吸血（受抗吸血减免；受强化/弱化治疗影响）
     if (atk.s.lifesteal > 0) {
       const lsRes = Math.min(0.8, def.s.resistLifesteal / 100)
-      const heal = Math.round(final * Math.min(0.6, atk.s.lifesteal / 100) * (1 - lsRes))
+      const heal = Math.round(final * Math.min(0.6, atk.s.lifesteal / 100) * (1 - lsRes) * healFactor(atk, def))
       atk.hp = Math.min(atk.s.hp, atk.hp + heal)
       if (heal > 0) log.push({ t: `${atk.c.name} 汲取气血 ${fmt(heal)}`, c: 'l-heal' })
     }
@@ -302,7 +323,7 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
         // 击杀特效
         const killer = st
         if (killer.s.killHealPct > 0) {
-          const heal = Math.round(killer.s.hp * killer.s.killHealPct / 100)
+          const heal = Math.round(killer.s.hp * killer.s.killHealPct / 100 * healFactor(killer, enemy))
           const before = killer.hp
           killer.hp = Math.min(killer.s.hp, killer.hp + heal)
           const real = killer.hp - before
@@ -326,7 +347,7 @@ export function simulate(a: Combatant, b: Combatant, opts: { boss?: boolean; max
       }
       st.dot = st.dot.filter(d => d.rounds > 0)
       if (st.s.regenPct > 0) {
-        const heal = Math.round(st.s.hp * st.s.regenPct / 100)
+        const heal = Math.round(st.s.hp * st.s.regenPct / 100 * healFactor(st, enemy))
         if (st.hp < st.s.hp) {
           st.hp = Math.min(st.s.hp, st.hp + heal)
           log.push({ t: `${st.c.name} 生生不息，回复 ${fmt(heal)} 气血`, c: 'l-heal' })
@@ -389,6 +410,8 @@ export function makeEnemy(lv: number, mult: number, name: string, opts: { boss?:
     procs.push(pick(pool))
     if (boss) procs.push(pick(pool))
   }
+  // BOSS 自带妖兽技能（受玩家「弱化灵兽」克制）
+  if (boss) procs.push({ id: 'e_pet', name: '妖兽扑咬', trigger: 'attack', chance: 0.22, desc: '妖兽张牙扑来', eff: { t: 'extraHit', mult: 0.5 }, src: 'pet' })
   return { name, stats: s, procs, hp: s.hp }
 }
 

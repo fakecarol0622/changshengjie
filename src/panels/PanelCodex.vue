@@ -40,7 +40,7 @@
       <div class="panel text-xs dim">
         品质 10+ 装备自带「铭纹」（炎/寒/雷/风/岩/幽/星/龙）：同纹 3 件或双纹各 2 件即触发<b class="gold">铭纹共鸣</b>。旧的“基础属性堆叠”类共鸣（暴击≥4件等）易达成且过强，已废止。
       </div>
-      <div v-for="cls in ['M', 'C', 'D', 'E', '宗']" :key="cls">
+      <div v-for="cls in ['M', 'E', '宗']" :key="cls">
         <div class="gold text-sm my-1">
           {{ CLS_N[cls] }}（{{ RES_BY_CLS[cls].length }}）
         </div>
@@ -65,7 +65,7 @@
     <!-- 词条 -->
     <template v-else-if="tab === 'affix'">
       <div v-for="tier in [1, 2, 3]" :key="tier" class="panel">
-        <div class="panel-t">{{ ['基 础 词 条（凡铁~玄铁可出）', '进 阶 词 条（地魄~仙蜕可出）', '顶 级 词 条（仙藏~混沌可出）'][tier - 1] }}</div>
+        <div class="panel-t">{{ ['基 础 词 条（凡品~地品主出）', '进 阶 词 条（天品~神品主出）', '顶 级 词 条（圣品~混沌可出）'][tier - 1] }}</div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-sm">
           <div v-for="a in AFFIXES.filter(x => x.tier === tier)" :key="a.k">
             {{ a.n }} <span class="dim text-xs">{{ a.min }} ~ {{ a.max }}{{ a.pct ? '%' : '' }}</span>
@@ -127,14 +127,13 @@
     <!-- 烛龙脉 -->
     <template v-else>
       <div class="panel">
-        <div class="text-xs dim mb-2">烛龙脉：一脉贯地，逐级疏通。每级提升可挖装备等级/品质与挖掘收益；<b class="gold">每级需先在本境挖掘一定次数</b>方可疏通，后期所需灵石与时间陡增，可用「龙髓」加速（挖掘/宝箱/坊市/长阶可得）。</div>
+        <div class="text-xs dim mb-2">烛龙脉：一脉贯地，逐级疏通。每级提升出货率、品质区间与开脉石产出；<b class="gold">每级需先在本境挖掘一定次数</b>方可疏通，后期所需灵石与时间渐增，可用「龙髓」加速（挖掘/宝箱/坊市/长阶可得）。<b class="jade">挖出的装备等级随主角境界（当前 Lv.{{ eqRange.min }}~{{ eqRange.max }}）</b>，与龙脉等级无关。</div>
         <table class="tbl">
-          <thead><tr><th>等级</th><th>阶</th><th>装备等级</th><th>品质区间</th><th>出货率</th><th>灵脉石</th><th>需挖掘</th><th>疏通消耗</th><th>耗时</th></tr></thead>
+          <thead><tr><th>等级</th><th>阶</th><th>品质区间</th><th>出货率</th><th>开脉石</th><th>需挖掘</th><th>疏通消耗</th><th>耗时</th></tr></thead>
           <tbody>
             <tr v-for="row in veinRows" :key="row.lv" :class="row.lv === g.vein.lv ? 'gold' : ''">
               <td>{{ row.lv }}{{ row.lv === g.vein.lv ? '（当前）' : '' }}</td>
               <td>{{ row.tier }}</td>
-              <td>Lv.{{ row.eq.min }}~{{ row.eq.max }}</td>
               <td>{{ qName(row.q.min) }} ~ {{ qName(row.q.max) }}</td>
               <td>+{{ row.luck }}%</td>
               <td>+{{ row.lingmaiP }}%</td>
@@ -155,17 +154,18 @@ import { useGame } from '../stores/game'
 import { fmt, fmtTime } from '../core/format'
 import { AFFIXES, PREFIX_SEGS, QUALITIES, qName } from '../data/qualities'
 import { CORE_RES, RESONANCES, SECT_RES } from '../data/resonances'
-import { VEIN_MAX, veinDigReq, veinEqRange, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
+import { VEIN_MAX, eqLevelRange, veinDigReq, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
 import { TITLES, TITLE_RARITY } from '../data/titles'
 import type { Equip } from '../types'
 import ItemCard from '../components/ItemCard.vue'
 
 const g = useGame()
+const eqRange = computed(() => eqLevelRange(g.lv))
 const veinRows = computed(() => {
-  const out: { lv: number; tier: string; eq: { min: number; max: number }; q: { min: number; max: number }; luck: number; lingmaiP: number; cost: number; time: number; digReq: number }[] = []
+  const out: { lv: number; tier: string; q: { min: number; max: number }; luck: number; lingmaiP: number; cost: number; time: number; digReq: number }[] = []
   for (let lv = 1; lv <= VEIN_MAX; lv++) {
     out.push({
-      lv, tier: veinTier(lv), eq: veinEqRange(lv), q: veinQRange(lv),
+      lv, tier: veinTier(lv), q: veinQRange(lv),
       luck: veinLuck(lv), lingmaiP: veinLingmaiP(lv),
       cost: lv < VEIN_MAX ? veinUpCost(lv) : 0, time: lv < VEIN_MAX ? veinUpTime(lv) : 0,
       digReq: veinDigReq(lv),
@@ -191,11 +191,9 @@ const filteredPrefixes = computed(() => {
 })
 function seen(p: string) { return g.codex.prefixes.includes(p) }
 
-const CLS_N: Record<string, string> = { M: '铭 纹 共 鸣', C: '器 品 共 鸣', D: '流 派 共 鸣', E: '玄 奇 共 鸣', 宗: '宗门专属共鸣' }
+const CLS_N: Record<string, string> = { M: '铭 纹 共 鸣', E: '玄 奇 共 鸣', 宗: '宗门专属共鸣' }
 const RES_BY_CLS = computed(() => ({
   M: CORE_RES.filter(r => r.cls === 'M'),
-  C: CORE_RES.filter(r => r.cls === 'C'),
-  D: CORE_RES.filter(r => r.cls === 'D'),
   E: CORE_RES.filter(r => r.cls === 'E'),
   宗: SECT_RES,
 }))

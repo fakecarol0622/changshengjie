@@ -121,7 +121,7 @@
         <span v-if="g.pass.premium" class="chip chip-gold">豪华线已解锁</span>
         <span class="text-xs dim">免费线：每级灵石，逢 5 级加洗练石</span>
       </div>
-      <div class="text-xs dim mt-2">豪华线：每级仙玉/灵脉石/洗练石随等级递增（仙玉 23→110/级），逢 5 级加共鸣石/改命石/论道帖，逢 10 级加寻仙令，10/20 级送灵兽蛋，15/20 级送龙髓，25 级送兽魂/妖珠，30 级送 15~16 品装备 + 仙玉×1288 + 太古兽卵 + 寻仙令×3 等（充值中心解锁）</div>
+      <div class="text-xs dim mt-2">豪华线：每级仙玉/开脉石/洗练石随等级递增（仙玉 23→110/级），逢 5 级加共鸣石/改命石/论道帖，逢 10 级加寻仙令，10/20 级送灵兽蛋，15/20 级送龙髓，25 级送兽魂/妖珠，30 级送 15~16 品装备 + 仙玉×1288 + 太古兽卵 + 寻仙令×3 等（充值中心解锁）</div>
       <button class="btn btn-xs w-full mt-2" @click="showPass = !showPass">{{ showPass ? '收起奖励一览' : '查看全部奖励（1~30 级）' }}</button>
       <div v-if="showPass" class="mt-2 max-h-72 overflow-y-auto text-xs" style="border: 1px solid var(--line2); border-radius: 6px; padding: 4px 8px">
         <div v-for="i in 30" :key="i" class="flex justify-between py-0.5 gap-2">

@@ -14,10 +14,7 @@ export const STAGE_SEGS: StageSeg[] = [
   { n: '问仙阶', from: 76, to: 90, enemies: ['仙墟守灵', '天外魔君', '劫云之灵', '混沌遗种'], desc: '问仙路上，再无退路' },
 ]
 
-// 剧情章节嵌入特定关卡（通关即触发阅卷）
-export const STAGE_STORY: Record<number, string> = {
-  5: 'sc1', 12: 'sc2', 20: 'sc3', 28: 'sc4', 36: 'sc5', 44: 'sc6', 52: 'sc7', 60: 'sc8',
-}
+// 剧情章节改为按出身嵌入（见 data/story.ts 的 storyAtStage），不再使用固定映射
 
 export function stageSeg(n: number): StageSeg {
   return STAGE_SEGS.find(s => n >= s.from && n <= s.to) || STAGE_SEGS[STAGE_SEGS.length - 1]
@@ -25,7 +22,7 @@ export function stageSeg(n: number): StageSeg {
 
 export function stageEnemy(n: number): { name: string; lv: number; mult: number; boss: boolean } {
   const seg = stageSeg(n)
-  const lv = Math.max(0, Math.min(42, Math.round((n - 1) * 0.47)))
+  const lv = Math.max(0, Math.min(439, Math.round((n - 1) * 4.76)))
   const mult = Math.round((1 + (n - 1) * 0.045) * 100) / 100
   const boss = n % 10 === 0
   const name = boss ? `守关·${seg.enemies[seg.enemies.length - 1]}` : seg.enemies[(n * 7) % seg.enemies.length] + (n % 5 === 0 ? '·精英' : '')

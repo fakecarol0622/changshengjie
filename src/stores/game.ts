@@ -11,9 +11,10 @@ import { calcPower, derive, emptyStats, genEquip, refreshScore, rollQuality, ENH
 import { makeEnemy, simulate } from '../core/battle'
 import { growNpcs, makeNpcs, makeRival, npcPower, npcRealm, rivalName } from '../core/npc'
 import { AFFIX_MAP, PREFIX_SEGS, QUALITIES, RUNE_MAP, SLOTS, SLOT_NAMES, affixPoolFor, qName } from '../data/qualities'
-import { MAJOR, MINOR, VEIN_MAX, baseHp, breakChance, cultRate, idleLingmai, idleLingshi, lvIndex, realmName, veinDigCost, veinDigReq, veinEquipLevel, veinEqRange, veinFalloff, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
+import { MAJOR, VEIN_MAX, baseHp, breakChance, cultRate, cultReq, idleLingmai, idleLingshi, lvIndex, mineEquipLevel, realmName, veinDigCost, veinDigReq, veinFalloff, veinLingmaiP, veinLuck, veinQRange, veinTier, veinUpCost, veinUpTime } from '../data/realms'
 import { BEAST_KINDS, BEAST_MAP, BEAST_STAGES, BEAST_STAGE_SKILLS, MATERIALS, MAT_MAP, PILL_MAP, PILL_QMULT, PILL_QNAMES, RECIPES, RECIPE_MAP, SEEDS, SEED_MAP, TECH_MAP, TECHNIQUES, TECH_TIERS, TREASURE_MAP, TREASURES, beastName } from '../data/items'
-import { ACTIVITIES, CYCLE_DAYS, DUNGEONS, DIFFS, ENCOUNTERS, ENC_NAMES, ORIGINS, PHYS_CHANCE, PHYSIQUES, SPIRIT_ROOTS, WORLD_MSGS, activeActivity, chaosOpen, cycleIndex } from '../data/world'
+import { ACTIVITIES, CYCLE_DAYS, DUNGEONS, DIFFS, ENCOUNTERS, ENC_NAMES, PHYS_CHANCE, PHYSIQUES, SPIRIT_ROOTS, WORLD_MSGS, activeActivity, chaosOpen, cycleIndex, type ActivityDef } from '../data/world'
+import { EVT_TYPES, eventFor, type EvtDef, type EvtType } from '../data/events'
 import { RANKS, SECTS, SECT_DAILY_TASKS, SECT_MAP, SECT_SHOP, SECT_WEEKLY_TASKS } from '../data/sects'
 import { MONTH_DAYS, RES_LABEL, XY_DYN, XY_SKUS, monthReward, newbieReward, realmGift, PAY_PACKS, type RewardItem } from '../data/rewards'
 import { NPC_DEFS } from '../data/npcs'
@@ -21,8 +22,8 @@ import { TITLES, TITLE_RARITY, type TitleDef } from '../data/titles'
 import { FAM_MAP, FAM_RARITY, catchRoll } from '../data/familiars'
 import { GACHA_COST_10, GACHA_COST_1, GACHA_PITY, rollGacha, type GachaResult } from '../data/gacha'
 import { COLLECTS, GOALS, MONTH_CARD, ONLINE_REWARDS, PASS_MAX, PASS_XP_PER, PVP_SHOP, PVP_TIERS, passFree, passPrem, passSeason, pvpRank, pvpTierIdx, weekSettle } from '../data/meta'
-import { STORY, STORY_MAP } from '../data/story'
-import { STAGE_MAX, STAGE_STORY, stageBonus, stageEnemy, stageRewards, stageSeg } from '../data/stages'
+import { ALL_STORY, STORY_MAP, storyAtStage, storyChapterReady, type StoryChapter, type StoryCtx } from '../data/mainstory'
+import { STAGE_MAX, stageBonus, stageEnemy, stageRewards, stageSeg } from '../data/stages'
 import { GIFTS, GIFT_MAP, giftFavor, npcLikes } from '../data/gifts'
 import { rollTraits } from '../data/traits'
 import { pushRecord, loadAccount, type AccountData } from '../core/account'
@@ -93,10 +94,6 @@ const RES_TRACK: Record<string, { keys?: string[]; flav?: string; qmin?: number;
   m_thunder_wind: { tags: ['thunder', 'wind'] }, m_flame_star: { tags: ['flame', 'star'] },
   m_frost_shadow: { tags: ['frost', 'shadow'] }, m_stone_dragon: { tags: ['stone', 'dragon'] },
   m_wind_shadow: { tags: ['wind', 'shadow'] },
-  tianqi: { qmin: 9 }, xianbing: { qmin: 11 }, daoqi: { qmin: 13 }, zhibao: { qmin: 15 },
-  liuhe: { special: '需全身 6 件装备品质完全相同' }, hunyuan_yi: { special: '需全身 6 件装备品质各不相同' },
-  leifa: { flav: '雷系' }, bingfeng: { flav: '冰系' }, huofen: { flav: '火系' },
-  jianxiu: { flav: '剑类' }, tixiu: { flav: '炼体' }, modao: { flav: '魔系' }, xiandao: { flav: '仙系' },
   hundun: { special: '需五行（金木水火土）各≥1（装备五行标签）' },
   yinyang: { special: '需仙系≥2 且魔系≥2' },
   lunhui_zhu: { keys: ['reincarnate', 'hp'] },
@@ -108,6 +105,22 @@ const RES_TRACK: Record<string, { keys?: string[]; flav?: string; qmin?: number;
 }
 
 interface EncState { id: string; resolved: string; options: { label: string; resText: string; done: boolean }[] }
+
+// NPC 日常叙话（战力更高则「请教」，更低则「指点」）
+const ASK_LINES = [
+  '「道无高下，心有明暗。你卡的从来不是境界，是那口咽不下的气。」',
+  '「剑要养，心更要养。一个急字，头上是把刀。」',
+  '「劫来之前先问自己：怕的是雷，还是没了退路？」',
+  '「修行如登山，莫看山顶，看脚下三步。」',
+  '「机缘是借的，因果是要还的。出手前想清楚拿什么还。」',
+]
+const TEACH_LINES = [
+  '你点破他卡了半年的关隘，他怔了半晌，长揖到地。',
+  '你以自身经历解他之惑，他眼中迷雾散了大半。',
+  '你把压箱底的一句心得说与他听，他反复咀嚼，忽而抚掌大笑。',
+  '你随手演练一遍拿手招法，他看得目不转睛，连称受教。',
+  '你为他梳理经脉关窍，他凝滞的气机豁然贯通。',
+]
 
 interface BattleView { title: string; log: LogLine[]; win: boolean; rewards: string[] }
 
@@ -143,14 +156,15 @@ export const useGame = defineStore('game', {
     lastTick: Date.now(),
     lastSave: Date.now(),
     name: '无名散修',
+    realName: '' as string,
     started: false,
     root: br.root,
     rootElems: br.elems as string[],
     physique: null as string | null,
-    origin: '',
     align: '正' as '正' | '魔' | '中',
     attrs: rollAttrs(),
     major: 0,
+    phase: 0,
     minor: 0,
     cultivation: 0,
     injured: 0,
@@ -178,6 +192,7 @@ export const useGame = defineStore('game', {
     equippedSkills: [] as string[],
     sect: '',
     sectRank: 0,
+    sectRankAt: 0, // 当前职位上任日（任期门槛）
     sectTasks: { daily: [] as number[], weekly: -1, lastDaily: 0, lastWeekly: 0, dailyDone: [] as boolean[], weeklyDone: false },
     cave: { level: 1, cult: 0, alchemy: 0, forge: 0, field: 0, spring: 0 },
     plots: [] as Plot[],
@@ -209,7 +224,7 @@ export const useGame = defineStore('game', {
     codesUsed: [] as string[],
     stage: { cleared: 0 },
     pvp: { points: 0, wins: 0, losses: 0 },
-    npcDaily: { day: 0, gift: {} as Record<number, number>, teach: {} as Record<number, number> },
+    npcDaily: { day: 0, gift: {} as Record<number, number>, teach: {} as Record<number, number>, chat: {} as Record<number, number> },
     tower: { floor: 1, best: 1, swept: 0, buffs: [] as string[], offer: null as null | { layer: number; ids: string[] }, dailyCounts: {} as Record<string, number>, weeklyCounts: {} as Record<string, number>, dayKey: 0, weekKey: 0, cleared: {} as Record<string, boolean> },
     // 妖王殿（世界妖王 · 伤害榜）：dmg=今日累计伤害，last=昨日结算结果
     yao: { dayKey: 0, used: 0, dmg: 0, last: null as null | { rank: number; total: number; summary: string } },
@@ -236,19 +251,28 @@ export const useGame = defineStore('game', {
     worldTimer: 0,
     playSec: 0,
     lastAutoMine: 0,
+    // 手动挖掘进度（不落盘）：未完成时显示进度，完成后退回产出供玩家查看
+    mineBusy: null as null | { t0: number; dur: number; count: number; cost: number; done: boolean; eqs: Equip[] },
     chaosDoneKey: -1,
     dead: false,
     tab: 'cultivate',
+    socialTab: 'rank',
+    // 限时活动状态：key = 周期:N 段 id，切换即重置
+    evt: { key: '', coins: {} as Record<string, number>, counts: {} as Record<string, number>, claimed: [] as string[], bought: {} as Record<string, number> },
+    ver: 3,
     }
   },
 
   getters: {
     myName(): string { return this.name },
-    lv(): number { return lvIndex(this.major, this.minor) },
-    realmText(): string { return realmName(this.major, this.minor) },
+    lv(): number { return lvIndex(this.major, this.phase, this.minor) },
+    realmText(): string { return realmName(this.major, this.phase, this.minor) },
     nextReq(): number {
-      const base = Math.round(60 * Math.pow(1.34, this.lv))
-      return base
+      return cultReq(this.lv)
+    },
+    // 装备等级基准：与主角等级同步（1..460 标尺）
+    eqLvBase(): number {
+      return Math.max(1, this.lv)
     },
     equippedItems(): Equip[] {
       const out: Equip[] = []
@@ -295,6 +319,12 @@ export const useGame = defineStore('game', {
     lingshiPerSec(): number { return idleLingshi(this.lv, this.attrs.qiYun, 1 + this.cave.level * 0.1) },
     lingmaiPerSec(): number { return idleLingmai(this.lv, (1 + this.cave.level * 0.08) * (1 + veinLingmaiP(this.vein.lv) / 100)) },
     activity() { return activeActivity(Date.now()) },
+    // 限时活动：当前活动线上的活动定义（与天象轮转同周期）
+    currentEvt(): EvtDef | null { return eventFor((this as unknown as { activity: ActivityDef | null }).activity?.id) },
+    // 限时活动实例键：周期编号 + 活动段 id（变化即重置进度）
+    evtKey(): string { const a = (this as unknown as { activity: ActivityDef | null }).activity; return a ? `${(this as unknown as { cycleKey: number }).cycleKey}:${a.id}` : '' },
+    // 已领取的任务 / 已购的商店条目（带活动实例前缀）
+    evtCoins(): number { const e = (this as unknown as { currentEvt: EvtDef | null }).currentEvt; return e ? (this.evt.coins[e.id] || 0) : 0 },
     chaosOpen(): boolean { return chaosOpen(Date.now()) },
     dayKey(): number { return Math.floor(Date.now() / DAY) },
     weekKey(): number { return Math.floor(Date.now() / WEEK) },
@@ -308,7 +338,38 @@ export const useGame = defineStore('game', {
       return a ? `${a.n}：${a.desc}` : '风平浪静：当前无异象，各玩法照常'
     },
     sectName(): string { return this.sect || '散修' },
+    // 是否自创宗门（非六大门派之一），自创后方可延揽门人
+    ownSect(): boolean { return !!this.sect && !SECTS.some(s => s.n === this.sect) },
+    // 已受邀入门的门人
+    sectMembers(): Npc[] { return this.npcs.filter(n => n.inSect) },
     rankName(): string { return this.sect ? RANKS[this.sectRank].n : '散修' },
+    // —— 仙途纪事（主线《长生劫》正卷 + 隐藏卷） ——
+    storyCtx(): StoryCtx {
+      return { stage: this.stage.cleared, yeLi: this.attrs.yeLi, lovers: this.npcs.filter(n => n.rel === 'lover').length, reinc: this.reinc.count, gongDe: this.attrs.gongDe, daoXin: this.attrs.daoXin }
+    },
+    storyList(): StoryChapter[] { return ALL_STORY },
+    storyReadyAny(): boolean {
+      const list = (this as unknown as { storyList: StoryChapter[] }).storyList
+      const ctx = (this as unknown as { storyCtx: StoryCtx }).storyCtx
+      return list.some(c => !this.story.done.includes(c.id) && storyChapterReady(c, ctx))
+    },
+    // 某阶解锁的剧情章节 id（已读则空）
+    storyIdAt(): (n: number) => string | null {
+      const list = (this as unknown as { storyList: StoryChapter[] }).storyList
+      const ctx = (this as unknown as { storyCtx: StoryCtx }).storyCtx
+      const done = this.story.done
+      return (n: number) => {
+        const c = list.find(x => x.stage === n)
+        return c && !done.includes(c.id) && storyChapterReady(c, ctx) ? c.id : null
+      }
+    },
+    // 长阶上带「有未读剧情」标记的阶数（仅已可就绪的卷）
+    storyMarkSet(): Set<number> {
+      const list = (this as unknown as { storyList: StoryChapter[] }).storyList
+      const ctx = (this as unknown as { storyCtx: StoryCtx }).storyCtx
+      const done = this.story.done
+      return new Set(list.filter(c => !done.includes(c.id) && storyChapterReady(c, ctx)).map(c => c.stage))
+    },
     invCount(): number { return this.inventory.length },
     topPower(): number { return this.derived.power },
     worldTop20(): { n: string; power: number; realm: string; me: boolean }[] {
@@ -357,7 +418,15 @@ export const useGame = defineStore('game', {
       return DEMON_SCENES[this.demon.scene] || null
     },
     breakChanceBase(): number {
-      return breakChance(this.major, this.minor, this.attrs.wuXing, this.attrs.daoXin, this.attrs.yeLi, this.attrs.jieQi, this.derived.stats.tribBonus)
+      return breakChance(this.major, this.phase, this.minor, this.attrs.wuXing, this.attrs.daoXin, this.attrs.yeLi, this.attrs.jieQi, this.derived.stats.tribBonus)
+    },
+    // 灵根品阶颜色（按名字后缀匹配最长的灵根定义，稀有度越高越亮）
+    rootColor(): string {
+      const n = this.root?.n || ''
+      let c = '#3f9e7a'
+      let len = 0
+      for (const s of SPIRIT_ROOTS) { if (s.n.length > len && n.endsWith(s.n)) { c = s.c; len = s.n.length } }
+      return c
     },
     // 洞府·炼器房：强化灵石折扣（每级 +4%，上限 50%）
     enhanceDiscount(): number {
@@ -429,7 +498,7 @@ export const useGame = defineStore('game', {
     shake() { this.fx.shake++ },
     pushModal(kind: string, data?: unknown) {
       // 全局唯一弹窗：避免同类堆叠（如连续战斗）
-      if (['battle', 'trib', 'demon', 'encounter', 'offline', 'death', 'ascend', 'item', 'pay', 'gacha', 'story', 'towerpick'].includes(kind)) {
+      if (['battle', 'trib', 'demon', 'encounter', 'offline', 'death', 'ascend', 'item', 'pay', 'gacha', 'story', 'towerpick', 'dig'].includes(kind)) {
         this.modals = this.modals.filter(m => m.kind !== kind)
       }
       this.modals.push({ kind, data })
@@ -530,19 +599,18 @@ export const useGame = defineStore('game', {
       const label = r.elems === 5 ? r.n : els.join('') + r.n
       return { n: label, mult: r.mult, desc: r.desc, elems: els }
     },
-    startGame(name: string, originIdx: number, seedVal?: number) {
-      if (seedVal) setSeed(seedVal)
+    startGame(name: string, realName = '', seedVal?: number) {
+      if (seedVal && typeof seedVal === 'number') setSeed(seedVal)
       this.seed = getSeed()
       this.name = name || '无名散修'
+      this.realName = realName || ''
       if (!this.traits.length) this.traits = rollTraits()
-      const r = this.rollRoot()
-      this.root = { n: r.n, mult: r.mult, desc: r.desc }
-      this.rootElems = r.elems
-      const origin = ORIGINS[originIdx]
-      this.origin = origin.n
-      if (origin.attrs) for (const [k, v] of Object.entries(origin.attrs)) (this.attrs as unknown as Record<string, number>)[k] += v
-      if (origin.lingshi) this.addRes('lingshi', origin.lingshi)
-      if (origin.lingmai) this.addRes('lingmai', origin.lingmai)
+      // 沿用开局界面所展示的灵根（不再重掷，避免「进去就变了」）
+      if (!this.root || !this.root.n) {
+        const r = this.rollRoot()
+        this.root = { n: r.n, mult: r.mult, desc: r.desc }
+        this.rootElems = r.elems
+      }
       if (chance(PHYS_CHANCE + this.reinc.count * 0.02)) {
         const p = weighted(PHYSIQUES.map(x => ({ w: x.w, v: x })))
         this.physique = p.n
@@ -553,7 +621,6 @@ export const useGame = defineStore('game', {
       const [w, a] = this.inventory
       if (w) this.equipItem(w.id)
       if (a) this.equipItem(a.id)
-      if (origin.tech) this.learnTechById('yinqi', true)
       // 转世加成
       if (this.reinc.points > 0) {
         const keys = ['genGu', 'wuXing', 'shenShi', 'qiYun', 'daoXin', 'meiLi']
@@ -592,11 +659,11 @@ export const useGame = defineStore('game', {
       // 修为
       const req = this.nextReq
       if (this.cultivation < req) this.cultivation = Math.min(req, this.cultivation + this.cultPerSec * dt)
-      if (this.major === 10 && this.minor === 3 && this.cultivation >= req && !this.ascended) {
+      if (this.major === 10 && this.phase === 3 && this.minor === 9 && this.cultivation >= req && !this.ascended) {
         this.ascended = true
         this.pushModal('ascend')
       }
-      // 灵石 / 灵脉石
+      // 灵石 / 开脉石
       this.addRes('lingshi', this.lingshiPerSec * dt)
       this.addRes('lingmai', this.lingmaiPerSec * dt)
       // 受伤恢复
@@ -608,7 +675,7 @@ export const useGame = defineStore('game', {
         this.addRes('lingmai', 10)
         this.addRes('lingshi', 2000)
         this.addRes('xianyu', 2)
-        this.toast('打坐圆满，领取双倍礼包：灵脉石×10、灵石×2000、仙玉×2', 'jade')
+        this.toast('打坐圆满，领取双倍礼包：开脉石×10、灵石×2000、仙玉×2', 'jade')
         sfx.success()
       }
       // 游历次数恢复（每 5 分钟 +1，上限随境界提升）
@@ -664,6 +731,8 @@ export const useGame = defineStore('game', {
       if (now - this.lastSave > 15000) this.save()
       // 每日刷新
       this.dailyReset()
+      // 限时活动窗口检查（跨段自动重置进度）
+      this.evtRoll()
       // 自动挖掘
       if (this.mine.auto && now - this.lastAutoMine > 900) {
         this.lastAutoMine = now
@@ -672,6 +741,18 @@ export const useGame = defineStore('game', {
       }
       // 龙脉疏通完成检查
       this.veinTick()
+      // 挖掘进度结算：到时开箱并展示产物
+      if (this.mineBusy && !this.mineBusy.done && now - this.mineBusy.t0 >= this.mineBusy.dur) {
+        const eqs = this.mineAt(this.mineBusy.count, true)
+        this.mineBusy.eqs = eqs
+        this.mineBusy.done = true
+        if (eqs.length) {
+          const best = eqs.reduce((a, b) => (a.score > b.score ? a : b))
+          if (best.q >= 12) sfx.epic()
+          else if (best.q >= 9) sfx.rare()
+          else sfx.success()
+        }
+      }
     },
 
     genWorldMsg() {
@@ -695,7 +776,7 @@ export const useGame = defineStore('game', {
       const req = veinDigReq(this.vein.lv)
       if ((this.vein.digs || 0) < req) { this.toast(`先在本境挖掘 ${req} 次方可疏通（当前 ${this.vein.digs || 0}）`, 'red'); return }
       const cost = veinUpCost(this.vein.lv)
-      if (this.res.lingshi < cost) { this.toast(`疏通需灵石×${fmt(cost)}`, 'red'); return }
+      if (this.res.lingshi < cost) { this.toast(`疏通需 灵石×${fmt(cost)}（持有 ${fmt(this.res.lingshi)}，还差 ${fmt(cost - this.res.lingshi)}）`, 'red'); return }
       this.res.lingshi -= cost
       this.vein.upgUntil = Date.now() + veinUpTime(this.vein.lv)
       this.toast(`开始疏通第 ${this.vein.lv + 1} 级龙脉（预计 ${fmtTime(veinUpTime(this.vein.lv))}），龙髓可加速`, 'gold')
@@ -719,8 +800,8 @@ export const useGame = defineStore('game', {
       this.vein.digs = 0 // 新境从头开采
       this.vein.lv++
       const lv = this.vein.lv
-      const eq = veinEqRange(lv)
-      this.toast(`烛龙脉疏通完成 → 第 ${lv} 级·${veinTier(lv)}！可挖出 Lv.${eq.min}~${eq.max} 装备`, 'gold')
+      const qr = veinQRange(lv)
+      this.toast(`烛龙脉疏通完成 → 第 ${lv} 级·${veinTier(lv)}！可挖品质上限提升至 ${qName(qr.max)}（装备等级随境界）`, 'gold')
       this.flash(); this.burst()
       sfx.epic()
       this.checkTitles()
@@ -734,7 +815,7 @@ export const useGame = defineStore('game', {
       const r = veinQRange(lv)
       const out: Equip[] = []
       for (let t = 0; t < times; t++) {
-        if (this.res.lingmai < cost) { if (!silent) this.toast('灵脉石不足', 'red'); break }
+        if (this.res.lingmai < cost) { if (!silent) this.toast('开脉石不足', 'red'); break }
         this.res.lingmai -= cost
         this.mine.pulls['v'] = (this.mine.pulls['v'] || 0) + 1
         this.mine.pity100['v'] = (this.mine.pity100['v'] || 0) + 1
@@ -757,7 +838,7 @@ export const useGame = defineStore('game', {
         if (this.mine.pity100['v'] >= 120) { forceQ = r.max; this.mine.pity100['v'] = 0 }
         if (this.mine.pity500['v'] >= 600) { forceRune = true; this.mine.pity500['v'] = 0 }
         const q = forceQ || rollQuality(r.min, r.max, luckBase, falloff)
-        const eqLv = veinEquipLevel(lv, luckBase) // 装备等级由龙脉等级决定
+        const eqLv = mineEquipLevel(this.lv, luckBase) // 装备等级随主角境界（与龙脉脱钩）
         const e = genEquip(eqLv, r.min, r.max, { q, forceRune, selfMined: true })
         if (this.derived.stats.starFloor > 0 && e.stars < this.derived.stats.starFloor) e.stars = this.derived.stats.starFloor
         this.acquire(e, true)
@@ -782,22 +863,20 @@ export const useGame = defineStore('game', {
     doSuge(): Equip[] {
       const lv = this.vein.lv
       const r = veinQRange(lv)
-      const cost = veinDigCost(lv)
       const out: Equip[] = []
       const n = ri(5, 8)
       for (let i = 0; i < n; i++) {
         const base = rollQuality(r.min, r.max, 45, veinFalloff(lv))
         const boost = i < 2 ? 1 : 0 // 至少2件品质提升一级
         const q = clamp(base + boost, 1, 16)
-        const e = genEquip(veinEquipLevel(lv, 45), r.min, r.max, { q, selfMined: true })
+        const e = genEquip(mineEquipLevel(this.lv, 45), r.min, r.max, { q, selfMined: true })
         this.acquire(e, true)
         out.push(e)
       }
-      const bonus = Math.round(cost * ri(10, 25))
-      this.addRes('lingmai', bonus)
-      this.addMat('longsui', ri(1, 3))
+      const sui = ri(1, 3)
+      this.addMat('longsui', sui)
       this.flash(); this.burst(); sfx.epic(); this.shake()
-      this.toast(`⚡ 脉力暴动！掉落 ${n} 件装备，额外获得灵脉石×${bonus}、龙髓若干`, 'gold')
+      this.toast(`⚡ 脉力暴动！一连炸出 ${n} 件装备，额外采得龙髓×${sui}`, 'gold')
       this.pushWorld(`⚡ 烛龙脉暴动！${this.name}在龙脉深处连获至宝！`)
       return out
     },
@@ -815,18 +894,30 @@ export const useGame = defineStore('game', {
       else if (lv >= 14 && r < 0.04) this.addMat('gongfaPage', 1)
       else if (lv >= 20 && r < 0.025) {
         const rq = veinQRange(lv)
-        const e = genEquip(veinEquipLevel(lv), rq.min, rq.max, { forceRune: true, selfMined: true })
+        const e = genEquip(mineEquipLevel(this.lv), rq.min, rq.max, { forceRune: true, selfMined: true })
         this.acquire(e, true)
         this.toast(`烛龙髓海：获得灵纹装备「${e.name}」`, 'gold')
       } else if (lv >= 34 && r < 0.02) this.getTreasure(10, 12)
       else if (lv >= 44 && r < 0.015) this.getTreasure(12, 15)
     },
     setAuto(b: boolean) { this.mine.auto = b },
+    // 手动挖掘：带进度条，结算后在弹窗展示产物（防止连点瞬挖）
+    mineDig(count = 1) {
+      if (this.mineBusy && !this.mineBusy.done) { this.toast('挖掘进行中……', 'dim'); return }
+      const cost = veinDigCost(this.vein.lv) * count
+      if (this.res.lingmai < cost) { this.toast(`开脉石不足（需 ${cost}）`, 'red'); return }
+      this.mineBusy = { t0: Date.now(), dur: 700 + count * 130, count, cost, done: false, eqs: [] }
+      this.pushModal('dig')
+    },
+    mineDigClaim() {
+      this.mineBusy = null
+      this.closeModal()
+    },
 
     // ================= 分身系统（化神期解锁） =================
     deriveCtx(equipped: Equip[]): DeriveCtx {
       return {
-        major: this.major, minor: this.minor,
+        major: this.major, phase: this.phase, minor: this.minor,
         attrs: this.attrs as unknown as Record<string, number>,
         equipped,
         fams: this.famEquipped,
@@ -870,7 +961,7 @@ export const useGame = defineStore('game', {
       if (this.major < 5) { this.toast('需化神期方可凝练分身', 'red'); return }
       if (id === 'yang') {
         if (this.clones.yangOpen) return
-        if (this.res.xianyu < 300 || this.res.lingmai < 10000) { this.toast('凝练阳神需 仙玉×300 · 灵脉石×10000', 'red'); return }
+        if (this.res.xianyu < 300 || this.res.lingmai < 10000) { this.toast('凝练阳神需 仙玉×300 · 开脉石×10000', 'red'); return }
         this.res.xianyu -= 300
         this.res.lingmai -= 10000
         this.clones.yangOpen = true
@@ -878,7 +969,7 @@ export const useGame = defineStore('game', {
       } else {
         if (this.clones.yinOpen) return
         if (!this.clones.yangOpen) { this.toast('需先凝练阳神', 'red'); return }
-        if (this.res.xianyu < 600 || this.res.lingmai < 25000) { this.toast('凝练阴身需 仙玉×600 · 灵脉石×25000', 'red'); return }
+        if (this.res.xianyu < 600 || this.res.lingmai < 25000) { this.toast('凝练阴身需 仙玉×600 · 开脉石×25000', 'red'); return }
         this.res.xianyu -= 600
         this.res.lingmai -= 25000
         this.clones.yinOpen = true
@@ -908,6 +999,19 @@ export const useGame = defineStore('game', {
       }
       this.equipMap[e.slot] = e.id
       sfx.click()
+    },
+    // 精确对比：临时换装后实测战力（含共鸣/铭纹联动），用于装备详情页「穿戴后战力」
+    powerWithEquip(e: Equip): number {
+      const map = this.equipMap
+      const inInv = this.inventory.some(x => x.id === e.id)
+      if (!inInv) this.inventory.push(e)
+      const prev = map[e.slot]
+      map[e.slot] = e.id
+      const withP = this.derived.power
+      if (prev == null) delete map[e.slot]
+      else map[e.slot] = prev
+      if (!inInv) this.inventory = this.inventory.filter(x => x.id !== e.id)
+      return withP
     },
     unequip(slot: SlotKey) { delete this.equipMap[slot] },
     reforge(id: number, mode: 'value' | 'type') {
@@ -973,10 +1077,10 @@ export const useGame = defineStore('game', {
       if (k === 'reincarnate') return ri(1, 3)
       const qm = 1 + 0.38 * (q - 1)
       const sm = 1 + 0.3 * (stars - 1)
-      if (def.flat === 'atk') return Math.max(1, Math.round(roll * 0.55 * Math.pow(1.48, lv) * qm * sm))
-      if (def.flat === 'def') return Math.max(1, Math.round(roll * 0.48 * Math.pow(1.48, lv) * qm * sm))
-      if (def.flat === 'hp') return Math.max(1, Math.round(roll * 0.7 * Math.pow(1.52, lv) * qm * sm))
-      if (def.flat === 'spd') return Math.max(1, Math.round(roll * (1 + lv * 0.05) * (1 + 0.08 * (q - 1))))
+      if (def.flat === 'atk') return Math.max(1, Math.round(roll * 0.55 * Math.pow(1.03644, lv) * qm * sm))
+      if (def.flat === 'def') return Math.max(1, Math.round(roll * 0.48 * Math.pow(1.03644, lv) * qm * sm))
+      if (def.flat === 'hp') return Math.max(1, Math.round(roll * 0.7 * Math.pow(1.03897, lv) * qm * sm))
+      if (def.flat === 'spd') return Math.max(1, Math.round(roll * (1 + lv * 0.00457) * (1 + 0.08 * (q - 1))))
       return Math.round(roll * 10) / 10
     },
     forge(baseId: number, matIds: string[], rune: boolean) {
@@ -998,7 +1102,7 @@ export const useGame = defineStore('game', {
       }
       const up = ri(1, 2)
       const nq = clamp(base.q + up, 1, 16)
-      const ne = genEquip(Math.max(1, base.level || this.lv), nq, nq, { q: nq, slot: base.slot, forceRune: rune || nq >= 12, selfMined: true })
+      const ne = genEquip(Math.max(1, base.level || this.eqLvBase), nq, nq, { q: nq, slot: base.slot, forceRune: rune || nq >= 12, selfMined: true })
       this.discardItem(baseId)
       this.acquire(ne)
       this.toast(`炼器成功！「${base.name}」→ 「${ne.name}」（${qName(nq)}）`, 'gold')
@@ -1023,7 +1127,7 @@ export const useGame = defineStore('game', {
       const req = this.nextReq
       if (this.cultivation < req) { this.toast('修为未满，尚不可强行突破', 'red'); return }
       const bonus = this.breakthroughPillBonus() + this.derived.stats.tribBonus
-      const p = breakChance(this.major, this.minor, this.attrs.wuXing, this.attrs.daoXin, this.attrs.yeLi, this.attrs.jieQi, bonus)
+      const p = breakChance(this.major, this.phase, this.minor, this.attrs.wuXing, this.attrs.daoXin, this.attrs.yeLi, this.attrs.jieQi, bonus)
       const roll = rnd()
       if (roll < p) {
         this.onBreakSuccess()
@@ -1032,35 +1136,51 @@ export const useGame = defineStore('game', {
       }
     },
     onBreakSuccess() {
-      if (this.minor >= 3) {
-        // 大境界突破
-        if (this.major >= 1) {
-          // 需要渡劫（炼气之后的大境界）
-          this.startTribulation()
-          return
+      if (this.minor >= 9) {
+        if (this.phase < 3) {
+          // 小境界跃迁（前期→中期→后期→圆满）
+          this.phase++
+          this.minor = 0
+        } else {
+          // 大境界突破
+          if (this.major >= 1) {
+            // 需要渡劫（炼气之后的大境界）
+            this.startTribulation()
+            return
+          }
+          this.major++
+          this.phase = 0
+          this.minor = 0
+          this.attrs.jieQi += 3 // 逆天改命，天劫值累积
+          this.spawnRivals()
         }
-        this.major++
-        this.minor = 0
-        this.attrs.jieQi += 3 // 逆天改命，天劫值累积
-        this.spawnRivals()
       } else {
         this.minor++
       }
       this.afterRealmUp()
     },
+    // 修为崩退一小阶（跨小境界回退）
+    demoteStage() {
+      if (this.minor > 0) this.minor--
+      else if (this.phase > 0) { this.phase--; this.minor = 9 }
+    },
     afterRealmUp(showModal = true) {
       this.cultivation = 0
       this.attrs.daoXin += 1
+      this.evtAdd('breakthrough')
+      this.checkPromotion() // 境界达标后自动触发宗门晋升考核
       sfx.breakthrough()
       this.flash()
       this.toast(`突破成功！境界提升至【${this.realmText}】`, 'gold')
-      this.pushWorld(`${this.name} 成功突破${this.realmText}，气象万千！`)
-      // 境界解锁提示
-      if (this.major === 1) this.toast('解锁：灵脉深层、洞府、坊市、天机阁', 'jade')
-      if (this.major === 2) this.toast('解锁：宗门任务、灵兽出战', 'jade')
-      if (this.major === 3) this.toast('解锁：收徒、天骄榜竞争愈发激烈', 'jade')
-      if (this.major === 5) { this.treasureSlots = 4; this.toast('法宝栏位 +1（4 位）', 'jade') }
-      if (this.major === 8) { this.treasureSlots = 5; this.toast('法宝栏位 +1（5 位）', 'jade') }
+      if (this.minor === 0) this.pushWorld(`${this.name} 成功突破${this.realmText}，气象万千！`)
+      // 境界解锁提示（入门阶生效一次）
+      if (this.minor === 0 && this.phase === 0) {
+        if (this.major === 1) this.toast('解锁：灵脉深层、洞府、坊市、天机阁', 'jade')
+        if (this.major === 2) this.toast('解锁：宗门任务、灵兽出战', 'jade')
+        if (this.major === 3) this.toast('解锁：收徒、天骄榜竞争愈发激烈', 'jade')
+        if (this.major === 5) { this.treasureSlots = 4; this.toast('法宝栏位 +1（4 位）', 'jade') }
+        if (this.major === 8) { this.treasureSlots = 5; this.toast('法宝栏位 +1（5 位）', 'jade') }
+      }
       if (showModal) this.pushModal('text', { title: '境界突破', body: `恭喜！你已突破至【${this.realmText}】。仙途无垠，继续精进吧。` })
     },
     onBreakFail() {
@@ -1071,10 +1191,10 @@ export const useGame = defineStore('game', {
       sfx.fail()
       this.shake()
       this.toast('突破失败！修为大幅倒退，经脉受创', 'red')
-      // 高境界失败可能修为崩退一个小境界
-      if (this.minor > 0 && this.major >= 4 && chance(0.15)) {
-        this.minor--
-        this.toast('经脉逆乱，修为崩退一个小境界！', 'red')
+      // 高境界失败可能修为崩退一小阶
+      if ((this.minor > 0 || this.phase > 0) && this.major >= 4 && chance(0.15)) {
+        this.demoteStage()
+        this.toast('经脉逆乱，修为崩退一小阶！', 'red')
       }
       // 心魔概率
       if (chance(0.35) && this.major >= 1) this.startDemon()
@@ -1195,8 +1315,8 @@ export const useGame = defineStore('game', {
           this.cultivation = Math.floor(this.nextReq * 0.3)
         } else if (r < 0.8) {
           this.trib = t
-          this.pushModal('text', { title: '渡劫失败·修为倒退', body: '雷劫之下，你修为崩退一个小境界，灰头土脸。' })
-          if (this.minor > 0) this.minor--
+          this.pushModal('text', { title: '渡劫失败·修为倒退', body: '雷劫之下，你修为崩退一小阶，灰头土脸。' })
+          this.demoteStage()
           this.cultivation = 0
           this.injured = 600
         } else {
@@ -1209,6 +1329,7 @@ export const useGame = defineStore('game', {
         t.awaiting = false
         t.success = true
         this.major++
+        this.phase = 0
         this.minor = 0
         this.attrs.jieQi += 3 // 逆天改命
         this.spawnRivals()
@@ -1302,7 +1423,7 @@ export const useGame = defineStore('game', {
       const p = this.plots[idx]
       if (!sd || !p || p.seed) return
       if ((this.mats[seedId] || 0) <= 0) { this.toast('没有这种种子', 'red'); return }
-      if (this.major < sd.realm) { this.toast(`需${realmName(sd.realm, 0)}方可种植`, 'red'); return }
+      if (this.major < sd.realm) { this.toast(`需${MAJOR[sd.realm]}方可种植`, 'red'); return }
       this.mats[seedId]--
       p.seed = seedId
       p.at = Date.now()
@@ -1318,6 +1439,7 @@ export const useGame = defineStore('game', {
       this.addMat(sd.herb, n)
       if (chance(0.08)) { this.addMat('jiuye', 1); this.toast('灵草变异！额外收获九叶莲×1', 'gold') }
       this.toast(`收获 ${MAT_MAP[sd.herb].n}×${n}`, 'jade')
+      this.evtAdd('harvest')
       p.seed = ''
       sfx.coin()
     },
@@ -1326,7 +1448,7 @@ export const useGame = defineStore('game', {
     alchemy(recipeId: string, accuracy: number) {
       const r = RECIPE_MAP[recipeId]
       if (!r) return
-      if (this.major < r.realm) { this.toast(`需${realmName(r.realm, 0)}修为方可炼制此丹`, 'red'); return }
+      if (this.major < r.realm) { this.toast(`需${MAJOR[r.realm]}修为方可炼制此丹`, 'red'); return }
       for (const [m, n] of r.mats) {
         if ((this.mats[m] || 0) < n) { this.toast(`材料不足：${MAT_MAP[m].n}×${n}`, 'red'); return }
       }
@@ -1341,6 +1463,7 @@ export const useGame = defineStore('game', {
       q = clamp(q, 0, 6)
       if (q === 0) { this.toast('这一炉炼成了废丹……', 'dim'); sfx.fail(); return }
       this.addPill(r.out, q, 1)
+      this.evtAdd('alchemy')
       sfx.success()
       if (q >= 5) { sfx.rare(); this.burst() }
       this.toast(`炼成【${PILL_MAP[r.out].n}·${PILL_QNAMES[q]}】！`, q >= 4 ? 'gold' : 'jade')
@@ -1512,7 +1635,7 @@ export const useGame = defineStore('game', {
       const needLv = (stage + 1) * 10
       if (b.level < needLv) { this.toast(`需达到 Lv.${needLv} 才能进阶`, 'dim'); return }
       const costS = 20 * (stage + 1) * (stage + 1)
-      const costL = Math.round(3000 * Math.pow(1.5, this.lv) * (stage + 1))
+      const costL = Math.round(3000 * Math.pow(1.04069, this.lv) * (stage + 1))
       if ((this.mats['shouhun'] || 0) < costS) { this.toast(`兽魂不足（需 ${costS}）`, 'red'); return }
       if (this.res.lingshi < costL) { this.toast(`灵石不足（需 ${fmt(costL)}）`, 'red'); return }
       this.mats['shouhun'] -= costS
@@ -1531,7 +1654,7 @@ export const useGame = defineStore('game', {
       const disc = this.enhanceDiscount // 炼器房：强化灵石折扣
       const needLs = Math.max(1, Math.round(cost.lingshi * (1 - disc)))
       if (this.res.lingshi < needLs) { this.toast(`灵石不足（需 ${fmt(needLs)}）`, 'red'); return }
-      if (this.res.lingmai < cost.lingmai) { this.toast(`灵脉石不足（需 ${cost.lingmai}）`, 'red'); return }
+      if (this.res.lingmai < cost.lingmai) { this.toast(`开脉石不足（需 ${cost.lingmai}）`, 'red'); return }
       this.res.lingshi -= needLs
       this.res.lingmai -= cost.lingmai
       e.enh = enh + 1
@@ -1572,7 +1695,7 @@ export const useGame = defineStore('game', {
           if (!this.titles.eq) this.titles.eq = t.id
           // 称号解锁附带资源奖励（成就实利）
           const xy = [0, 5, 10, 20, 50, 100][t.r]
-          const ls = Math.round(2000 * Math.pow(1.3, this.lv) * t.r * 0.4)
+          const ls = Math.round(2000 * Math.pow(1.0262, this.lv) * t.r * 0.4)
           this.addRes('xianyu', xy)
           this.addRes('lingshi', ls)
           this.toast(`获得称号【${t.n}】（${TITLE_RARITY[t.r]}）：仙玉×${xy}、灵石×${fmt(ls)}`, t.r >= 4 ? 'gold' : 'jade')
@@ -1628,6 +1751,7 @@ export const useGame = defineStore('game', {
       const bonus = Math.floor(this.attrs.qiYun / 8) + Math.min(4, this.reinc.count)
       const def = catchRoll(bonus)
       const msg = this.absorbFamiliar(def.id)
+      this.evtAdd('fam')
       this.toast(`珠中化形：${msg}`, def.r >= 4 ? 'gold' : 'jade')
       if (def.r >= 4) { sfx.rare(); this.burst() } else sfx.success()
     },
@@ -1669,7 +1793,7 @@ export const useGame = defineStore('game', {
         return s
       }
       // equip
-      const eq = genEquip(this.lv, gr.qmin, Math.min(16, gr.qmax), { selfMined: false, forceRune: gr.rune != null })
+      const eq = genEquip(this.eqLvBase, gr.qmin, Math.min(16, gr.qmax), { selfMined: false, forceRune: gr.rune != null })
       if (gr.rune && gr.rune !== 'random') eq.rune = gr.rune
       if (eq.rune) refreshScore(eq)
       this.acquire(eq, true)
@@ -1788,6 +1912,16 @@ export const useGame = defineStore('game', {
       this.toast(`月卡每日领取：仙玉×${MONTH_CARD.dailyXianyu}`, 'gold')
       sfx.coin()
     },
+    // 打开社交面板并定位到指定子页（天骄榜/论道台/众生百态）
+    openSocial(t: string) {
+      this.socialTab = t
+      this.tab = 'social'
+    },
+    // 打开任意面板（供面板内跳转）
+    openPanel(t: string) {
+      this.tab = t
+      this.socialTab = this.socialTab || 'rank'
+    },
     claimPass() {
       const lv = this.passLevel
       let n = 0
@@ -1840,7 +1974,7 @@ export const useGame = defineStore('game', {
       } else if (roll < 0.46) {
         if (this.derived.power > npcPower(n) * 1.05) {
           n.favor += 3
-          const loot = Math.round(300 * Math.pow(1.3, this.lv))
+          const loot = Math.round(300 * Math.pow(1.0262, this.lv))
           this.addRes('lingshi', loot)
           this.toast(`「${n.real}」上门约战，你轻取一筹（好感+3、灵石+${fmt(loot)}）`, 'jade')
         } else {
@@ -1850,15 +1984,15 @@ export const useGame = defineStore('game', {
       } else if (roll < 0.58) {
         n.favor += 2
         this.addRes('lingmai', 5)
-        this.toast(`「${n.real}」与你分享一处小机缘（好感+2、灵脉石+5）`, 'dim')
+        this.toast(`「${n.real}」与你分享一处小机缘（好感+2、开脉石+5）`, 'dim')
       } else if (roll < 0.70) {
         // 蒙面修士拦路打劫
         if (this.derived.power > npcPower(n) * 1.1) {
-          const loot = Math.round(500 * Math.pow(1.3, this.lv))
+          const loot = Math.round(500 * Math.pow(1.0262, this.lv))
           this.addRes('lingshi', loot)
           this.toast(`一伙蒙面修士拦路打劫，被你就地反抢（灵石 +${fmt(loot)}）`, 'jade')
         } else {
-          const loss = Math.min(Math.round(this.res.lingshi * 0.04), Math.round(600 * Math.pow(1.3, this.lv)))
+          const loss = Math.min(Math.round(this.res.lingshi * 0.04), Math.round(600 * Math.pow(1.0262, this.lv)))
           this.res.lingshi = Math.max(0, this.res.lingshi - loss)
           this.toast(`遭遇蒙面修士劫道，破财免灾（灵石 -${fmt(loss)}）`, 'red')
         }
@@ -1869,7 +2003,7 @@ export const useGame = defineStore('game', {
       } else if (roll < 0.86) {
         this.addRes('lingmai', 10)
         this.addRes('xianyu', 2)
-        this.toast('一场灵雨恰逢其会，你顺势采撷了不少灵机（灵脉石+10、仙玉+2）', 'jade')
+        this.toast('一场灵雨恰逢其会，你顺势采撷了不少灵机（开脉石+10、仙玉+2）', 'jade')
       } else if (roll < 0.94) {
         // 赠礼：NPC 送你一件礼物
         const g2 = pick(GIFTS)
@@ -1900,7 +2034,7 @@ export const useGame = defineStore('game', {
     storyCtxReady(id: string): boolean {
       const c = STORY_MAP[id]
       if (!c) return false
-      return c.cond({ stage: this.stage.cleared, yeLi: this.attrs.yeLi, lovers: this.npcs.filter(n => n.rel === 'lover').length, reinc: this.reinc.count })
+      return storyChapterReady(c, this.storyCtx)
     },
 
     // ================= 问道长阶（小关卡·剧情嵌入） =================
@@ -1926,12 +2060,12 @@ export const useGame = defineStore('game', {
       }
       this.pushBattleView({ title: `问道长阶 · 第 ${n} 阶${info.boss ? '·守关' : ''}`, log: r.log, win: won, rewards })
       this.pushModal('battle')
-      // 剧情嵌入：通关特定阶自动开启对应章节（关闭战报后阅卷）
+      // 剧情嵌入：通关本阶自动开启主线正卷（关闭战报后阅卷）
       if (won) {
-        const sc = STAGE_STORY[n]
-        if (sc && !this.story.done.includes(sc) && this.storyCtxReady(sc)) {
-          this.toast(`仙途纪事解锁：${STORY_MAP[sc]?.n}（关闭战报后阅卷）`, 'gold')
-          this.pushModal('story', sc)
+        const ch = storyAtStage(n)
+        if (ch && !this.story.done.includes(ch.id) && this.storyCtxReady(ch.id)) {
+          this.toast(`仙途纪事解锁：《${ch.n}》（关闭战报后阅卷）`, 'gold')
+          this.pushModal('story', ch.id)
         }
       }
     },
@@ -1942,9 +2076,9 @@ export const useGame = defineStore('game', {
     resolveStory(id: string, idx: number) {
       const c = STORY_MAP[id]
       if (!c || this.story.done.includes(id)) return
-      const ch = c.choices[idx]
-      if (!ch) return
       this.story.done.push(id)
+      const ch = c.choices[idx]
+      if (!ch) { this.closeModal(); return }
       const gained: string[] = []
       if (ch.cult) { const amt = Math.round(ch.cult < 10 ? ch.cult * this.nextReq : ch.cult); this.cultivation = Math.min(this.nextReq, this.cultivation + amt); gained.push(`修为 +${fmt(amt)}`) }
       if (ch.lingshi) { this.addRes('lingshi', ch.lingshi); gained.push(`灵石 +${fmt(ch.lingshi)}`) }
@@ -1953,9 +2087,19 @@ export const useGame = defineStore('game', {
       if (ch.gongDe) { this.attrs.gongDe += ch.gongDe; gained.push(`功德 +${ch.gongDe}`) }
       if (ch.yeLi) { this.attrs.yeLi = Math.max(0, this.attrs.yeLi + ch.yeLi); gained.push(`业力 ${ch.yeLi > 0 ? '+' : ''}${ch.yeLi}`) }
       if (ch.jieQi) { this.attrs.jieQi += ch.jieQi; gained.push(`天劫值 +${ch.jieQi}`) }
+      if (ch.attr) { const k = ch.attr[0]; const bag = this.attrs as unknown as Record<string, number>; bag[k] = (bag[k] || 0) + ch.attr[1]; gained.push(`${keyName(k)} +${ch.attr[1]}`) }
       this.closeModal()
       this.pushModal('text', { title: `仙途纪事 · ${c.n}`, body: `${ch.t}${gained.length ? `\n\n${gained.join('、')}` : ''}` })
       sfx.rare()
+    },
+    // 无抉择章节：收卷收录
+    finishStory(id: string) {
+      const c = STORY_MAP[id]
+      if (!c || this.story.done.includes(id)) { this.closeModal(); return }
+      this.story.done.push(id)
+      this.closeModal()
+      this.toast(`《${c.n}》已收入仙途纪事卷宗`, 'jade')
+      sfx.click()
     },
     checkGoals() {
       const ctx = {
@@ -1997,6 +2141,7 @@ export const useGame = defineStore('game', {
       if (this.sect) { this.toast('你已身在宗门', 'red'); return }
       this.sect = SECT_MAP[id].n
       this.sectRank = 0
+      this.sectRankAt = Math.floor(Date.now() / DAY)
       this.refreshSectTasks(true)
       this.toast(`你加入【${SECT_MAP[id].n}】，成为一名杂役弟子`, 'gold')
       this.pushWorld(`${this.name} 拜入${SECT_MAP[id].n}门下`)
@@ -2004,12 +2149,28 @@ export const useGame = defineStore('game', {
     leaveSect() {
       if (!this.sect) return
       const old = this.sect
+      const wasOwn = this.ownSect
       this.sect = ''
       this.res.contrib = 0
       this.sectRank = 0
-      for (const n of this.npcs) if (n.sect === old) n.favor = Math.max(-100, n.favor - 100)
-      this.toast('你叛出宗门，自此为散修。旧日同门视你如仇。', 'red')
-      this.pushWorld(`${this.name} 叛出${old}，天下哗然`)
+      this.sectRankAt = 0
+      for (const n of this.npcs) {
+        if (n.inSect) {
+          // 自家门人：解散时不再追随，也不结仇
+          n.inSect = false
+          n.sect = '散修'
+          if (!wasOwn) n.favor = Math.max(-100, n.favor - 100)
+        } else if (!wasOwn && n.sect === old) {
+          n.favor = Math.max(-100, n.favor - 100)
+        }
+      }
+      if (wasOwn) {
+        this.toast('你解散了自家宗门，门人各自散去', 'dim')
+        this.pushWorld(`${this.name} 解散了亲手创立的【${old}】`)
+      } else {
+        this.toast('你叛出宗门，自此为散修。旧日同门视你如仇。', 'red')
+        this.pushWorld(`${this.name} 叛出${old}，天下哗然`)
+      }
     },
     foundSect(sname: string) {
       if (this.sect) { this.toast('你已身在宗门', 'red'); return }
@@ -2017,6 +2178,7 @@ export const useGame = defineStore('game', {
       this.res.contrib -= 100000
       this.sect = sname || '太初宗'
       this.sectRank = 7
+      this.sectRankAt = Math.floor(Date.now() / DAY)
       this.refreshSectTasks(true)
       this.toast(`你开宗立派，创建【${this.sect}】，自任掌门！`, 'gold')
       this.pushWorld(`${this.name} 开宗立派，创立【${this.sect}】！`)
@@ -2043,7 +2205,7 @@ export const useGame = defineStore('game', {
         const real = this.sectTasks.daily[idx]
         if (real == null || this.sectTasks.dailyDone[idx]) { this.toast('此任务已完成', 'dim'); return }
         const t = SECT_DAILY_TASKS[real]
-        const c = ri(t.contrib[0], t.contrib[1])
+        const c = Math.round(ri(t.contrib[0], t.contrib[1]) * (1 + this.sectRank * 0.8) * (1 + this.sectMembers.length * 0.1))
         this.res.contrib += c
         this.sectTasks.dailyDone[idx] = true
         this.addRes('lingshi', 300)
@@ -2052,7 +2214,7 @@ export const useGame = defineStore('game', {
       } else {
         if (this.sectTasks.weekly < 0 || this.sectTasks.weeklyDone) { this.toast('周常已完成', 'dim'); return }
         const t = SECT_WEEKLY_TASKS[this.sectTasks.weekly]
-        const c = ri(t.contrib[0], t.contrib[1])
+        const c = Math.round(ri(t.contrib[0], t.contrib[1]) * (1 + this.sectRank * 0.8) * (1 + this.sectMembers.length * 0.1))
         this.res.contrib += c
         this.sectTasks.weeklyDone = true
         this.addRes('xilian', 2)
@@ -2063,20 +2225,29 @@ export const useGame = defineStore('game', {
     },
     checkPromotion() {
       const next = this.sectRank + 1
-      if (next >= RANKS.length) return
+      if (!this.sect || next >= RANKS.length) return
       const r = RANKS[next]
-      if (this.res.contrib >= r.contrib && this.major >= r.realm) {
-        // 考核战斗
-        const enemy = makeEnemy(this.lv + 1, 1.2, '宗门考核官')
-        const result = this.playerBattle(enemy)
-        if (result.win === 'a') {
-          this.sectRank = next
-          this.toast(`通过宗门考核，晋升【${r.n}】！`, 'gold')
-          this.pushWorld(`${this.name} 在${this.sect}中晋升为${r.n}`)
-          sfx.levelup()
-        } else {
-          this.toast('考核失败，来日再战（贡献保留）', 'red')
-        }
+      // 门槛一：贡献
+      if (this.res.contrib < r.contrib) return
+      // 门槛二：境界（含小境界）
+      if (this.major < r.realm || (this.major === r.realm && this.phase < r.phase)) return
+      // 门槛三：当前职位任期
+      const dk = Math.floor(Date.now() / DAY)
+      if (r.tenure > 0 && dk - (this.sectRankAt || 0) < r.tenure) {
+        this.toast(`晋升【${r.n}】需在当前职位任满 ${r.tenure} 日（已任 ${dk - (this.sectRankAt || 0)} 日）`, 'dim')
+        return
+      }
+      // 考核战斗：职位越高，考核官越强
+      const enemy = makeEnemy(this.lv + 12 + next * 6, 1.15 + next * 0.06, '宗门考核官')
+      const result = this.playerBattle(enemy)
+      if (result.win === 'a') {
+        this.sectRank = next
+        this.sectRankAt = dk
+        this.toast(`通过宗门考核，晋升【${r.n}】！`, 'gold')
+        this.pushWorld(`${this.name} 在${this.sect}中晋升为${r.n}`)
+        sfx.levelup()
+      } else {
+        this.toast('考核失败，来日再战（贡献保留）', 'red')
       }
     },
     sectBuy(itemId: string) {
@@ -2098,7 +2269,7 @@ export const useGame = defineStore('game', {
         case 'egg': this.eggs.push({ id: uid(), q: clamp(ri(3, 8), 1, 16) }); break
         case 'pill_podan': this.addPill('podan', 3, 1); break
         case 'sectEquip': {
-          const e = genEquip(this.lv, 7, Math.min(16, 7 + this.sectRank), { selfMined: false })
+          const e = genEquip(this.eqLvBase, 7, Math.min(16, 7 + this.sectRank), { selfMined: false })
           this.acquire(e)
           break
         }
@@ -2116,7 +2287,7 @@ export const useGame = defineStore('game', {
       const lines: LogLine[] = [{ t: `【宗门战】${this.sect} 对阵 ${foe.n}（五场三胜）`, c: 'l-sys' }]
       let myWins = 0
       let foeWins = 0
-      const allies = pickN(this.npcs.filter(n => n.sect === this.sect || n.sect === '散修'), 4)
+      const allies = pickN([...this.sectMembers, ...this.npcs.filter(n => !n.inSect && (n.sect === this.sect || n.sect === '散修'))], 4)
       for (let i = 0; i < 5; i++) {
         const foeNpc = pick(this.npcs.filter(n => !allies.includes(n)))
         const foeLv = Math.max(1, Math.floor(foeNpc.level) + ri(-1, 1))
@@ -2140,7 +2311,7 @@ export const useGame = defineStore('game', {
         else { foeWins++; lines.push({ t: `第${i + 1}场：${name} 惜败`, c: 'l-bad' }) }
       }
       const won = myWins > foeWins
-      const contrib = won ? 1500 : 500
+      const contrib = Math.round((won ? 1500 : 500) * (1 + this.sectRank * 0.6) * (1 + this.sectMembers.length * 0.1))
       this.res.contrib += contrib
       const rewards: string[] = [`宗门贡献 +${contrib}`]
       if (won) {
@@ -2150,7 +2321,7 @@ export const useGame = defineStore('game', {
         rewards.push('破障丹（中品）×1')
         this.pushWorld(`${this.sect} 宗门战大胜 ${foe.n}！`)
       } else {
-        rewards.push('安慰宝箱：灵脉石×50')
+        rewards.push('安慰宝箱：开脉石×50')
         this.addRes('lingmai', 50)
       }
       lines.push({ t: won ? `🏆 ${this.sect} 获胜！` : `💔 ${this.sect} 落败，虽败犹荣`, c: 'l-rainbow' })
@@ -2218,6 +2389,7 @@ export const useGame = defineStore('game', {
     dungeonRewards(id: string, diff: number): string[] {
       const df = DIFFS[diff]
       const lv = this.lv
+      const eqLv = Math.min(460, this.eqLvBase + diff * 20) // 装备等级随境界（难度加成）
       const rw: string[] = []
       const act = this.activity
       const add = (key: string, n: number, label: string) => { this.addRes(key, n); rw.push(`${label}×${n}`) }
@@ -2225,10 +2397,9 @@ export const useGame = defineStore('game', {
       const times = Math.max(1, Math.round(df.rw))
       switch (id) {
         case 'kuangku':
-          add('lingmai', Math.round((30 + lv * 8) * df.rw), '灵脉石')
-          add('lingshi', Math.round(200 * Math.pow(1.25, lv) * df.rw), '灵石')
-          this.acquire(genEquip(lv, Math.min(16, 2 + diff), Math.min(16, 5 + diff * 2), {}), true)
-          rw.push('装备×1')
+          add('lingmai', Math.round((30 + lv * 0.75) * df.rw), '开脉石')
+          add('lingshi', Math.round(200 * Math.pow(1.02225, lv) * df.rw), '灵石')
+          { const e = genEquip(eqLv, Math.min(16, 2 + diff), Math.min(16, 5 + diff * 2), {}); this.acquire(e, true); rw.push(`${qName(e.q)}·${e.name}`) }
           if (chance(0.4)) addM('yaozhu', ri(1, 2))
           if (chance(0.25)) add('gaiming', 1, '改命石')
           if (chance(0.15)) add('pvpTicket', 1, '论道帖')
@@ -2236,13 +2407,11 @@ export const useGame = defineStore('game', {
         case 'jianzhong':
           addM('jianyi', ri(1, 3) * times)
           if (chance(0.4)) add('gaiming', 1, '改命石')
-          for (let i = 0; i < 2; i++) this.acquire(genEquip(lv, Math.min(16, 3 + diff), Math.min(16, 6 + diff * 2), { slot: 'weapon' }), true)
-          rw.push('武器向装备×2')
+          for (let i = 0; i < 2; i++) { const e = genEquip(eqLv, Math.min(16, 3 + diff), Math.min(16, 6 + diff * 2), { slot: 'weapon' }); this.acquire(e, true); rw.push(`${qName(e.q)}·${e.name}`) }
           break
         case 'hantan':
           if (chance(0.35)) add('gaiming', 1, '改命石')
-          for (let i = 0; i < 2; i++) this.acquire(genEquip(lv, Math.min(16, 3 + diff), Math.min(16, 6 + diff * 2), { slot: pick(['armor', 'helm', 'belt']) }), true)
-          rw.push('防御向装备×2')
+          for (let i = 0; i < 2; i++) { const e = genEquip(eqLv, Math.min(16, 3 + diff), Math.min(16, 6 + diff * 2), { slot: pick(['armor', 'helm', 'belt']) }); this.acquire(e, true); rw.push(`${qName(e.q)}·${e.name}`) }
           break
         case 'youlins': {
           const eggBoost = act?.id === 'beast' ? 2 : 1
@@ -2265,7 +2434,7 @@ export const useGame = defineStore('game', {
           break
         case 'qihun':
           addM('fabaoPiece', ri(2, 5) * times)
-          add('qihun', Math.round((8 + lv) * df.rw), '器魂')
+          add('qihun', Math.round((8 + Math.floor(lv * 0.1)) * df.rw), '器魂')
           break
         case 'langhuan':
           addM('gongfaPage', ri(2, 4) * times)
@@ -2278,15 +2447,14 @@ export const useGame = defineStore('game', {
           if (chance(0.3)) rw.push('渡劫丹（中品）×1')
           break
         case 'guxu':
-          this.acquire(genEquip(lv, Math.min(16, 10 + diff), Math.min(16, 12 + diff), { forceRune: true }), true)
-          rw.push('灵纹装备×1')
+          { const e = genEquip(eqLv, Math.min(16, 10 + diff), Math.min(16, 12 + diff), { forceRune: true }); this.acquire(e, true); rw.push(`灵纹·${qName(e.q)}·${e.name}`) }
           if (chance(0.25)) addM('zhibaoPiece', 1)
           if (chance(0.3)) add('gaiming', 1, '改命石')
           break
         default: break
       }
       // 通用掉落
-      add('lingshi', Math.round(100 * Math.pow(1.28, lv) * df.rw), '灵石')
+      add('lingshi', Math.round(100 * Math.pow(1.02458, lv) * df.rw), '灵石')
       if (chance(0.3)) { add('sweep', 1, '扫荡券') }
       this.pushLog(`副本奖励：${rw.join('、')}`, 'jade')
       return rw
@@ -2297,32 +2465,34 @@ export const useGame = defineStore('game', {
       const d = DUNGEONS.find(x => x.id === id)
       const at = this.dailyAttempts(id)
       if (at.used >= at.max) { this.toast('今日/本周次数已尽', 'red'); return }
-      if (this.res.sweep < 1) { this.toast('扫荡券不足', 'red'); return }
-      this.res.sweep--
+      if (!this.monthActive) {
+        if (this.res.sweep < 1) { this.toast('扫荡券不足（月卡可免券扫荡）', 'red'); return }
+        this.res.sweep--
+      }
       const rw = this.dungeonRewards(id, diff)
       this.addTaskProgress('sweep', 1)
       if (d?.weekly) this.tower.weeklyCounts[id] = (this.tower.weeklyCounts[id] || 0) + 1
       else this.tower.dailyCounts[id] = (this.tower.dailyCounts[id] || 0) + 1
-      this.toast(`扫荡完成：${rw.join('、')}`, 'jade')
+      this.toast(`扫荡完成${this.monthActive ? '（月卡免券）' : ''}：${rw.join('、')}`, 'jade')
       sfx.coin()
     },
     sweepAll() {
       let n = 0
       for (const d of DUNGEONS) {
         if (d.special || !d.daily) continue
-        while (this.res.sweep > 0 && n < 40) {
+        if (!this.tower.cleared[`${d.id}_0`]) continue
+        while (n < 40) {
+          if (!this.monthActive && this.res.sweep < 1) break
           const at = this.dailyAttempts(d.id)
           if (at.used >= at.max) break
-          if (!this.tower.cleared[`${d.id}_0`]) break
-          const before = this.res.sweep
           this.sweepDungeon(d.id, 0)
-          if (this.res.sweep === before) break
           n++
         }
+        if (!this.monthActive && this.res.sweep < 1) break
         if (n >= 40) break
       }
-      if (!n) this.toast('没有可扫荡的副本（需已通关·有扫荡券·有余次）', 'dim')
-      else this.toast(`一键扫荡完成：共扫荡 ${n} 次，剩余扫荡券 ${this.res.sweep}`, 'jade')
+      if (!n) this.toast(`没有可扫荡的副本（需已通关·有余次${this.monthActive ? '' : '·有扫荡券'}）`, 'dim')
+      else this.toast(`一键扫荡完成：共 ${n} 次${this.monthActive ? '（月卡免券）' : `，剩余扫荡券 ${this.res.sweep}`}`, 'jade')
     },
     autoEquipBest() {
       const map = this.equipMap
@@ -2353,7 +2523,7 @@ export const useGame = defineStore('game', {
       const stage = tStageOf(f)
       const isWang = stage === 10
       const isJiang = stage === 5
-      const lv = Math.min(43, 2 + Math.floor(f * 0.55))
+      const lv = Math.min(439, 20 + Math.floor(f * 5.6))
       const mult = 1 + f * 0.045 + (isWang ? 0.5 : isJiang ? 0.15 : 0)
       const name = isWang ? `第${layer}层·镇塔妖王` : isJiang ? `第${layer}层·妖将` : `第${layer}层·第${stage}关 妖卒`
       const enemy = makeEnemy(lv, mult, name, { boss: isWang || isJiang })
@@ -2415,6 +2585,7 @@ export const useGame = defineStore('game', {
         this.tower.floor = f + 1
         if (f > this.tower.best) this.tower.best = f
         const g = this.towerGrant(f)
+        this.evtAdd('tower')
         rewards.push(`洗练石×${g.xl}`, `共鸣石×${g.gm}`, `灵石×${fmt(g.ls)}`)
         if (stage === 5) { this.addRes('pvpTicket', 2); rewards.push('论道帖×2') }
         if (isWang) {
@@ -2467,6 +2638,7 @@ export const useGame = defineStore('game', {
         if ((stage === 3 || stage === 8) && chance(0.5)) { this.addRes('gaiming', 1); totals.gm2++; lines.push({ t: `第${layer}层·第${stage}关寻得改命石×1`, c: 'l-heal' }) }
       }
       const done = this.tower.floor - 1
+      this.evtAdd('tower', Math.max(0, fought - (lost ? 1 : 0)))
       lines.unshift({ t: `连战 ${fought} 场，胜 ${fought - (lost ? 1 : 0)} 场，推进至 第${tLayerOf(this.tower.floor)}层·第${tStageOf(this.tower.floor)}关${clearedLayer ? `（通关第${clearedLayer}层！）` : ''}${fought >= MAX && !lost && !clearedLayer ? '（连胜止于 60 场，可再次连战）' : ''}`, c: 'l-sys' })
       if (lost && lastLog.length) lines.push(...lastLog.slice(-22))
       const rewards = [`洗练石×${totals.xl}`, `共鸣石×${totals.gm}`, `灵石×${fmt(totals.ls)}`]
@@ -2503,7 +2675,7 @@ export const useGame = defineStore('game', {
     yaoSpec() {
       const dayKey = this.dayKey
       const [i, j] = yaoTraitIdx(dayKey)
-      const lv = Math.min(43, 3 + Math.floor(this.lv * 0.6))
+      const lv = Math.min(439, 32 + Math.floor(this.lv * 0.6))
       const hp = Math.round(baseHp(lv) * 900)
       return { name: yaoName(dayKey), traits: [YAO_TRAITS[i], YAO_TRAITS[j]], idx: [i, j] as [number, number], lv, hp }
     },
@@ -2550,7 +2722,7 @@ export const useGame = defineStore('game', {
       const pts0 = this.pvp.points
       const tierIdx = pvpTierIdx(pts0)
       const foeName = rivalName()
-      const lv = Math.max(0, Math.min(42, this.lv + ri(-1, 2)))
+      const lv = Math.max(0, Math.min(439, this.lv + ri(-12, 20)))
       const enemy = makeEnemy(lv, 1, `论道对手·${foeName}`, { proc: true })
       // 对手强度跟随你的战力与天梯分：段位越高对手越难
       const target = this.derived.power * clamp(0.8 + pts0 / 2200, 0.8, 1.2) * rf(0.94, 1.06)
@@ -2602,7 +2774,7 @@ export const useGame = defineStore('game', {
       const ck = this.cycleKey
       if (this.chaosDoneKey === ck) { this.toast('本期混沌之门已探索', 'dim'); return }
       this.chaosDoneKey = ck
-      const enemy = makeEnemy(Math.min(43, this.lv + 3), 1.6, '混沌之子', { boss: true })
+      const enemy = makeEnemy(Math.min(439, this.lv + 32), 1.6, '混沌之子', { boss: true })
       const r = simulate(this.playerCombatant(), enemy)
       const rewards: string[] = []
       if (r.win === 'a') {
@@ -2641,7 +2813,7 @@ export const useGame = defineStore('game', {
           const priceMod = rf(0.7, 1.3) * (1 - this.attrs.meiLi * 0.008)
           if (kind === 'equip') {
             const qmax = Math.min(16, 3 + Math.floor(this.major * 1.2))
-            const e = genEquip(Math.max(1, this.lv + ri(-2, 2)), 1, qmax, { selfMined: false })
+            const e = genEquip(Math.max(1, this.eqLvBase + ri(-8, 8)), 1, qmax, { selfMined: false })
             refreshScore(e)
             items.push({ kind, payload: e, price: Math.round(e.score * 0.8 * priceMod + 50), haggled: 0 })
           } else if (kind === 'pill') {
@@ -2680,7 +2852,7 @@ export const useGame = defineStore('game', {
       const consign: ConsignListing[] = []
       for (let i = 0; i < 6; i++) {
         const qmax = Math.min(16, 4 + Math.floor(this.major * 1.3))
-        const e = genEquip(Math.max(1, this.lv + ri(-2, 2)), 1, qmax, { selfMined: false })
+        const e = genEquip(Math.max(1, this.eqLvBase + ri(-8, 8)), 1, qmax, { selfMined: false })
         refreshScore(e)
         consign.push({ id: uid(), payload: e, kind: 'equip', name: e.name, q: e.q, price: Math.round(e.score * 0.9 * rf(0.8, 1.2)), mine: false })
       }
@@ -2701,7 +2873,7 @@ export const useGame = defineStore('game', {
         const give = pick(givePool)
         barter.push({
           id: uid(),
-          wantDesc: `${cnt}件玄铁(${minQ})级以上装备`,
+          wantDesc: `${cnt}件${qName(minQ)}(${minQ})级以上装备`,
           wantCount: cnt,
           wantFilter: { type: 'equip', minQ },
           giveDesc: give.desc,
@@ -2801,11 +2973,11 @@ export const useGame = defineStore('game', {
         const qmax = Math.min(16, 6 + Math.floor(this.major * 1.5))
         const roll = rnd()
         if (roll < 0.5) {
-          const e = genEquip(Math.max(1, this.lv + ri(1, 3)), qmax - 2, qmax, { selfMined: false })
+          const e = genEquip(Math.max(1, this.eqLvBase + ri(4, 12)), qmax - 2, qmax, { selfMined: false })
           refreshScore(e)
           lots.push({ payload: e, kind: 'equip', name: e.name, q: e.q, price: Math.round(e.score * 1.1), npcMax: Math.round(e.score * rf(1.2, 2.2)), sold: false, shill: 0 })
         } else if (roll < 0.75) {
-          const e = genEquip(Math.max(1, this.lv + ri(2, 4)), qmax, qmax, { forceRune: true, selfMined: false })
+          const e = genEquip(Math.max(1, this.eqLvBase + ri(8, 16)), qmax, qmax, { forceRune: true, selfMined: false })
           refreshScore(e)
           lots.push({ payload: e, kind: 'equip', name: e.name, q: e.q, price: Math.round(e.score * 1.3), npcMax: Math.round(e.score * rf(1.5, 2.6)), sold: false, shill: 0 })
         } else {
@@ -2851,7 +3023,7 @@ export const useGame = defineStore('game', {
         const roll = rnd()
         if (roll < 0.35) {
           const qmax = Math.min(16, 6 + Math.floor(this.major * 1.6))
-          const e = genEquip(Math.max(1, this.lv + ri(-2, 2)), qmax - 1, qmax, { selfMined: false })
+          const e = genEquip(Math.max(1, this.eqLvBase + ri(-8, 8)), qmax - 1, qmax, { selfMined: false })
           refreshScore(e)
           goods.push({ kind: 'equip', payload: e, price: Math.round(e.score * 0.45), fake: chance(0.25), name: e.name })
         } else if (roll < 0.65) {
@@ -2882,7 +3054,7 @@ export const useGame = defineStore('game', {
       this.market.bmGoods.splice(idx, 1)
       if (chance(0.15)) {
         this.toast('正道执法者盯上了你，触发追杀！', 'red')
-        const enemy = makeEnemy(this.lv + 2, 1.2, '正道执法者')
+        const enemy = makeEnemy(this.lv + 5, 1.2, '正道执法者')
         const r = simulate(this.playerCombatant(), enemy)
         this.pushBattleView({ title: '黑市追杀', log: r.log, win: r.win === 'a', rewards: r.win === 'a' ? ['击退追兵，缴获灵石×3000'] : ['被罚灵石×2000'] })
         this.pushModal('battle')
@@ -2944,6 +3116,7 @@ export const useGame = defineStore('game', {
       this.npcDaily.gift[id] = used + 1
       n.favor += 12
       n.hate = Math.max(0, n.hate - 10)
+      this.evtAdd('gift')
       this.toast(`${n.name} 收下灵石礼金，好感 +12（今日 ${used + 1}/${max}）`, 'jade')
     },
     giftNpcWith(id: number, giftId: string) {
@@ -2959,10 +3132,25 @@ export const useGame = defineStore('game', {
       n.favor += gain
       n.hate = Math.max(0, n.hate - (match ? 15 : 5))
       this.npcDaily.gift[id] = used + 1
+      this.evtAdd('gift')
       this.toast(match
         ? `投其所好！「${n.real}」对「${def.n}」爱不释手，好感 +${gain}（喜好：${npcLikes(id).join('、')}）`
         : `「${n.real}」收下「${def.n}」，好感 +${gain}`, match ? 'gold' : 'jade')
       sfx.coin()
+    },
+    // 快捷赠礼：自动挑一件（优先投其所好，其次喜好值最高）
+    quickGift(id: number) {
+      const n = this.npcs.find(x => x.id === id)
+      if (!n) return
+      const used = this.npcDaily.gift[id] || 0
+      if (used >= this.giftMax) { this.toast(`今日赠礼已达 ${this.giftMax} 次上限`, 'dim'); return }
+      const owned = GIFTS.filter(g2 => (this.mats[g2.id] || 0) > 0)
+      if (!owned.length) { this.toast('暂无礼物（游历/坊市/副本可得）', 'red'); return }
+      const likes = npcLikes(id)
+      const liked = owned.filter(g2 => likes.includes(g2.type))
+      const pool = liked.length ? liked : owned
+      const best = pool.reduce((a, b) => (b.fav > a.fav ? b : a))
+      this.giftNpcWith(id, best.id)
     },
     teachNpc(id: number) {
       const n = this.npcs.find(x => x.id === id)
@@ -2977,6 +3165,24 @@ export const useGame = defineStore('game', {
       } else {
         this.toast(`你指点 ${n.name} 修行，好感 +10（今日 ${used + 1}/5）`, 'jade')
       }
+    },
+    // 日常叙话：对方战力更高则为「请教」，更低则为「指点」；每日首次好感 +4~8，重复叙聊无好感
+    chatNpc(id: number) {
+      const n = this.npcs.find(x => x.id === id)
+      if (!n) return
+      const stronger = npcPower(n) > this.derived.power
+      const mode = stronger ? '请教' : '指点'
+      const line = pick(stronger ? ASK_LINES : TEACH_LINES)
+      const used = this.npcDaily.chat[id] || 0
+      if (used >= 1) {
+        this.toast(`与你${mode === '请教' ? '论道' : '叙话'}：「${n.real}」${line}`, 'dim')
+        return
+      }
+      this.npcDaily.chat[id] = 1
+      const gain = ri(4, 8)
+      n.favor += gain
+      this.toast(`${mode}「${n.real}」：${line}（好感 +${gain}）`, 'jade')
+      sfx.click()
     },
     proposeNpc(id: number) {
       const n = this.npcs.find(x => x.id === id)
@@ -3005,6 +3211,31 @@ export const useGame = defineStore('game', {
       if (this.npcs.some(x => x.rel === 'disciple')) { this.toast('你已有一名亲传弟子', 'dim'); return }
       n.rel = 'disciple'
       this.toast(`收入 ${n.name} 为亲传弟子！`, 'gold')
+    },
+    // —— 延揽门人（需自创宗门；好感≥80、战力不弱于对方、非仇敌；上限 8 人） ——
+    recruitToSect(id: number) {
+      const n = this.npcs.find(x => x.id === id)
+      if (!n) return
+      if (n.inSect) { this.toast(`${n.name} 已是本门门人`, 'dim'); return }
+      if (!this.ownSect) { this.toast('需先开宗立派（自创宗门），方可延揽门人', 'red'); return }
+      if (n.rel === 'enemy') { this.toast('仇怨未了，对方岂肯入门', 'red'); return }
+      if (n.favor < 80) { this.toast(`好感不足（${n.favor}/80），对方尚不愿入你门下`, 'red'); return }
+      if (this.derived.power < npcPower(n)) { this.toast('需战力不弱于对方，方显掌门气度', 'red'); return }
+      if (this.sectMembers.length >= 8) { this.toast('宗门门人已满（8 名）', 'dim'); return }
+      n.inSect = true
+      n.sect = this.sect
+      n.favor = Math.min(100, n.favor + 10)
+      this.toast(`【${n.name}】受邀加入【${this.sect}】，从此荣辱与共！`, 'gold')
+      this.pushWorld(`${n.name} 受邀加入【${this.sect}】，担任门人`)
+      sfx.epic()
+    },
+    dismissFromSect(id: number) {
+      const n = this.npcs.find(x => x.id === id)
+      if (!n || !n.inSect) return
+      n.inSect = false
+      n.sect = '散修'
+      n.favor = Math.max(-100, n.favor - 20)
+      this.toast(`你请【${n.name}】另谋高就（好感 -20）`, 'dim')
     },
     npcDecayTick() {
       // 道侣长期不理可能离去
@@ -3061,7 +3292,7 @@ export const useGame = defineStore('game', {
       this.yao.used = 0
       this.yao.dmg = 0
       // NPC 交互日常次数重置
-      this.npcDaily = { day: dk, gift: {}, teach: {} }
+      this.npcDaily = { day: dk, gift: {}, teach: {}, chat: {} }
       const wk = Math.floor(Date.now() / WEEK)
       if (this.tower.weekKey !== wk) {
         const had = this.tower.weekKey > 0
@@ -3085,9 +3316,53 @@ export const useGame = defineStore('game', {
       this.refreshSectTasks(true)
       this.npcDecayTick()
     },
+    // ================= 限时活动 =================
+    evtRoll() {
+      const a = this.activity
+      if (!a) { this.evt.key = ''; return }
+      const key = `${this.cycleKey}:${a.id}`
+      if (this.evt.key !== key) {
+        this.evt = { key, coins: {}, counts: {}, claimed: [], bought: {} }
+      }
+    },
+    evtAdd(t: string, n = 1) {
+      if (n <= 0 || !EVT_TYPES.includes(t as EvtType)) return
+      this.evtRoll()
+      if (!this.currentEvt) return
+      this.evt.counts[t] = (this.evt.counts[t] || 0) + n
+    },
+    claimEvtTask(taskId: string) {
+      const ev = this.currentEvt
+      if (!ev) return
+      const task = ev.tasks.find(x => x.id === taskId)
+      if (!task) return
+      const ck = `${ev.id}:${taskId}`
+      if (this.evt.claimed.includes(ck)) { this.toast('该活动任务奖励已领取', 'dim'); return }
+      if ((this.evt.counts[task.type] || 0) < task.target) { this.toast('任务尚未完成', 'dim'); return }
+      this.evt.claimed.push(ck)
+      this.evt.coins[ev.id] = (this.evt.coins[ev.id] || 0) + task.coins
+      this.toast(`领取「${task.n}」：${ev.coin}×${task.coins}`, 'gold')
+      sfx.success()
+    },
+    buyEvt(skuId: string) {
+      const ev = this.currentEvt
+      if (!ev) return
+      const sku = ev.shop.find(x => x.id === skuId)
+      if (!sku) return
+      const bk = `${ev.id}:${skuId}`
+      if ((this.evt.bought[bk] || 0) >= sku.limit) { this.toast('已达限购上限', 'red'); return }
+      if ((this.evt.coins[ev.id] || 0) < sku.cost) { this.toast(`${ev.coin}不足`, 'red'); return }
+      this.evt.coins[ev.id] -= sku.cost
+      this.evt.bought[bk] = (this.evt.bought[bk] || 0) + 1
+      const out = this.grant(sku.grant)
+      this.toast(`兑换「${sku.n}」：${out.join('、')}`, 'jade')
+      sfx.coin()
+    },
     addTaskProgress(k: string, n: number) {
       this.daily.progress[k] = (this.daily.progress[k] || 0) + n
       this.pass.xp += n // 战令经验
+      // 限时活动进度联动（mine/dungeon/sweep→dungeon/meditate/pvp 等共享计数器）
+      this.evtAdd(k === 'sweep' ? 'dungeon' : k, n)
     },
     claimTask(idx: number) {
       const t = DAILY_TASKS[idx]
@@ -3105,7 +3380,7 @@ export const useGame = defineStore('game', {
         this.addMat('longsui', 2)
         this.pass.xp += 30
         this.addPill('podan', 2, 1)
-        this.toast('领取活跃宝箱：灵脉石×30、灵石×5000、洗练石×3、寻仙令×2、破障丹×1、仙玉×10、龙髓×2', 'gold')
+        this.toast('领取活跃宝箱：开脉石×30、灵石×5000、洗练石×3、寻仙令×2、破障丹×1、仙玉×10、龙髓×2', 'gold')
         sfx.rare()
       }
     },
@@ -3155,7 +3430,7 @@ export const useGame = defineStore('game', {
         } else if (r.t === 'fam') {
           out.push(this.absorbFamiliar(r.fid || this.pickFamInRange(r.rmin, r.rmax)))
         } else {
-          const e = genEquip(this.lv, r.qmin, Math.min(16, r.qmax), { selfMined: false })
+          const e = genEquip(this.eqLvBase, r.qmin, Math.min(16, r.qmax), { selfMined: false })
           this.acquire(e, true)
           out.push(`${qName(e.q)}·${e.name}`)
         }
@@ -3200,7 +3475,7 @@ export const useGame = defineStore('game', {
       this.addRes('lingmai', 5)
       this.addRes('lingshi', 1000)
       this.addRes('xianyu', 1)
-      this.toast('领取每日礼包：灵脉石×5、灵石×1000、仙玉×1', 'jade')
+      this.toast('领取每日礼包：开脉石×5、灵石×1000、仙玉×1', 'jade')
       sfx.coin()
     },
     meditate() {
@@ -3236,7 +3511,7 @@ export const useGame = defineStore('game', {
       if (res.text) done.push(res.text)
       if (res.cult) { const amt = Math.round(res.cult < 10 ? res.cult * scaleReq : res.cult); this.cultivation = Math.min(this.nextReq, this.cultivation + amt); done.push(`修为 +${fmt(amt)}`) }
       if (res.lingshi) { this.addRes('lingshi', res.lingshi); done.push(`灵石 +${res.lingshi}`) }
-      if (res.lingmai) { this.addRes('lingmai', res.lingmai); done.push(`灵脉石 +${res.lingmai}`) }
+      if (res.lingmai) { this.addRes('lingmai', res.lingmai); done.push(`开脉石 +${res.lingmai}`) }
       if (res.xilian) { this.addRes('xilian', res.xilian) }
       if (res.gongming) { this.addRes('gongming', res.gongming) }
       if (res.xianyu) { this.addRes('xianyu', res.xianyu); done.push(`仙玉 +${res.xianyu}`) }
@@ -3248,7 +3523,7 @@ export const useGame = defineStore('game', {
       if (res.reincP) { this.reinc.points += res.reincP; done.push(`轮回之力 +${res.reincP}`) }
       if (res.hpPct && res.hpPct < 0) { this.injured = Math.max(this.injured, Math.abs(res.hpPct) * 12); done.push('受伤') }
       if (res.mat) { this.addMat(res.mat[0], res.mat[1]); done.push(`${MAT_MAP[res.mat[0]].n}×${res.mat[1]}`) }
-      if (res.equipQ) { const e = genEquip(Math.max(1, this.lv + ri(-1, 1)), res.equipQ[0], Math.min(16, res.equipQ[1]), { selfMined: true }); this.acquire(e); done.push(`获得「${e.name}」`) }
+      if (res.equipQ) { const e = genEquip(Math.max(1, this.eqLvBase + ri(-4, 4)), res.equipQ[0], Math.min(16, res.equipQ[1]), { selfMined: true }); this.acquire(e); done.push(`获得「${e.name}」`) }
       if (res.techTier) {
         const pool = TECHNIQUES.filter(t => t.tier <= res.techTier! && !this.techs.some(x => x.id === t.id))
         if (pool.length) { const t = pick(pool); this.learnTechById(t.id); done.push(`习得【${t.n}】`) }
@@ -3257,7 +3532,7 @@ export const useGame = defineStore('game', {
       if (res.beast) { const kind = pick(BEAST_KINDS); const q2 = clamp(ri(2, 8), 1, 16); const b: Beast = { id: uid(), name: beastName(q2, kind.n), kind: kind.id, q: q2, level: 1, exp: 0 }; this.beasts.push(b); done.push(`灵兽【${b.name}】认主`) }
       if (res.treasure) { this.getTreasure(9, 12) }
       if (res.fight) {
-        const enemy = makeEnemy(Math.max(1, this.lv + res.fight), 1.15, '伏击者')
+        const enemy = makeEnemy(Math.max(1, this.lv + res.fight * 4), 1.15, '伏击者')
         const r = simulate(this.playerCombatant(), enemy)
         if (r.win === 'a') { done.push('战斗胜利！') }
         else { this.injured = Math.max(this.injured, 400); done.push('战斗失利，负伤而逃') }
@@ -3279,7 +3554,7 @@ export const useGame = defineStore('game', {
       }
     },
     serialize(): Record<string, unknown> {
-      const skip = new Set(['toasts', 'modals', 'battle', 'trib', 'demon', 'enc', 'fx', 'world', 'log', 'worldTimer', 'lastAutoMine', 'chaosDoneKey', 'tab'])
+      const skip = new Set(['toasts', 'modals', 'battle', 'trib', 'demon', 'enc', 'fx', 'world', 'log', 'worldTimer', 'lastAutoMine', 'chaosDoneKey', 'tab', 'mineBusy'])
       const out: Record<string, unknown> = {}
       for (const [k, v] of Object.entries(this.$state)) {
         if (skip.has(k)) continue
@@ -3340,10 +3615,14 @@ export const useGame = defineStore('game', {
       if (this.settings.music == null) this.settings.music = true
       if (!Array.isArray(this.traits)) this.traits = []
       if (!this.story || !Array.isArray(this.story.done)) this.story = { done: [] }
+      if (typeof this.sectRankAt !== 'number') this.sectRankAt = 0
+      if (typeof this.realName !== 'string') this.realName = ''
       // —— 新系统迁移：关卡/天梯/NPC日常/新资源/词条锁定/灵兽资质 ——
       if (!this.stage || typeof this.stage.cleared !== 'number') this.stage = { cleared: 0 }
       if (!this.pvp || typeof this.pvp.points !== 'number') this.pvp = { points: 0, wins: 0, losses: 0 }
-      if (!this.npcDaily || typeof this.npcDaily.day !== 'number') this.npcDaily = { day: 0, gift: {}, teach: {} }
+      if (!this.npcDaily || typeof this.npcDaily.day !== 'number') this.npcDaily = { day: 0, gift: {}, teach: {}, chat: {} }
+      if (!this.npcDaily.chat || typeof this.npcDaily.chat !== 'object') this.npcDaily.chat = {}
+      if (this.mineBusy === undefined) this.mineBusy = null
       if (this.res.pvpTicket == null) this.res.pvpTicket = 3
       if (this.res.gaiming == null) this.res.gaiming = 0
       if (this.res.gachaTicket == null) this.res.gachaTicket = 5
@@ -3369,6 +3648,33 @@ export const useGame = defineStore('game', {
       // 妖王殿改版（世界妖王伤害榜）
       if (!this.yao || typeof this.yao.dmg !== 'number') this.yao = { dayKey: 0, used: 0, dmg: 0, last: null }
       if (this.yao.last === undefined) this.yao.last = null
+      // 面板导航状态
+      if (this.socialTab == null) this.socialTab = 'rank'
+      if (this.tab == null) this.tab = 'cultivate'
+      // 限时活动状态补全
+      if (!this.evt || typeof this.evt !== 'object' || !this.evt.counts) this.evt = { key: '', coins: {}, counts: {}, claimed: [], bought: {} }
+      if (!Array.isArray(this.evt.claimed)) this.evt.claimed = []
+      if (typeof this.evt.coins !== 'object') this.evt.coins = {}
+      if (typeof this.evt.counts !== 'object') this.evt.counts = {}
+      if (typeof this.evt.bought !== 'object') this.evt.bought = {}
+      // 第19批：境界体系重构（4 小境界 × 10 阶 = 440 级标尺）——旧档等级映射，NPC/装备同步
+      const srcVer = (data as { ver?: number }).ver
+      if (srcVer !== 3) {
+        const lvSrc = srcVer === 2 ? this.major * 10 + this.minor : this.major * 4 + this.minor
+        const lvNew = Math.max(0, Math.min(439, Math.round(lvSrc * (srcVer === 2 ? 4 : 10.14))))
+        this.major = Math.min(10, Math.floor(lvNew / 40))
+        const rem = lvNew % 40
+        this.phase = Math.floor(rem / 10)
+        this.minor = rem % 10
+        const npcK = srcVer === 2 ? 4 : 10.14
+        for (const n of this.npcs) n.level = Math.round(n.level * npcK * 10) / 10
+        if (srcVer !== 2) this.cultivation = Math.round(this.cultivation * 8) // 需求抬升，保留进度感
+        // 装备等级：1..42 旧标尺 → 1..460 新标尺
+        const remapEq = (e: unknown) => { const q = e as Equip | undefined; if (q && typeof q.level === 'number') q.level = Math.max(1, Math.round(q.level * 10.95)) }
+        for (const e of this.inventory) remapEq(e)
+        for (const e of Object.values(this.codex.items)) remapEq(e)
+      }
+      this.ver = 3
       // 版本迁移：灵脉 → 烛龙脉（旧深度换算等级，一次性；depth 随后归零避免重转）
       if (!this.vein || typeof this.vein.lv !== 'number') this.vein = { lv: 1, upgUntil: 0, digs: 0 }
       if (typeof this.vein.upgUntil !== 'number') this.vein.upgUntil = 0
@@ -3505,6 +3811,7 @@ export const useGame = defineStore('game', {
         }
         this.lastTick = now
         this.dailyReset()
+        this.evtRoll()
         if (this.dead) this.pushModal('death', { reason: '前尘已尽，静待轮回裁决', tribFail: false, points: 0 })
       }
     },

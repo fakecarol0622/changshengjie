@@ -26,7 +26,7 @@
         <div class="panel my-2 text-center">
           <div>修为 <b class="gold">+{{ fmt(Number(d('cult'))) }}</b></div>
           <div>灵石 <b class="gold">+{{ fmt(Number(d('ls'))) }}</b></div>
-          <div>灵脉石 <b class="gold">+{{ fmt(Number(d('lm'))) }}</b></div>
+          <div>开脉石 <b class="gold">+{{ fmt(Number(d('lm'))) }}</b></div>
         </div>
         <div v-if="offlineDelta" class="text-xs dim text-center mb-2">{{ offlineDelta }}</div>
         <button class="btn btn-gold w-full" @click="g.closeModal()">收下机缘</button>
@@ -175,7 +175,7 @@
           <span class="chip" :style="{ color: qColor(itemView.q), borderColor: qColor(itemView.q) }">{{ qName(itemView.q) }}品质</span>
           <span class="chip chip-gold">Lv.{{ itemView.level }}</span>
           <span class="chip">{{ SLOT_NAMES[itemView.slot] }}</span>
-          <span class="chip">{{ '★'.repeat(itemView.stars) }}</span>
+          <span class="chip" :title="`星级提升词条数值：百分比类每星 +4%，固定值类每星 +30%，速度每星 +8%（同时影响装备评分）`">{{ '★'.repeat(itemView.stars) }}</span>
           <span v-if="itemView.rune" class="chip chip-gold">灵纹·{{ runeName }}</span>
           <span v-if="itemView.selfMined" class="chip chip-jade">自挖</span>
           <span v-if="itemView.enchanted" class="chip">已洗练</span>
@@ -183,13 +183,14 @@
         </div>
         <div class="text-center text-xs dim mb-2">
           评分 <b class="gold">{{ fmt(itemView.score) }}</b>
-          <span v-if="!isWorn && slotEq"> · 穿戴「{{ slotEq.name }}」{{ fmt(slotEq.score) }} · 差值 <b :class="diff >= 0 ? 'jade' : 'red'">{{ diff >= 0 ? '+' : '' }}{{ fmt(diff) }}</b></span>
+          <span v-if="!isWorn && slotEq"> · 穿戴「{{ slotEq.name }}」{{ fmt(slotEq.score) }}</span>
+          <span v-if="!isWorn"> · 穿戴后战力 <b :class="powerDiff >= 0 ? 'jade' : 'red'">{{ powerDiff >= 0 ? '+' : '' }}{{ fmt(powerDiff) }}</b><span class="dim2">（实测·含共鸣）</span></span>
         </div>
           <div v-if="inInv" class="panel !p-2 mb-2">
           <div class="flex justify-between items-center gap-2 flex-wrap text-sm">
             <span>强化 <b class="gold">+{{ itemView.enh || 0 }}</b> <span class="text-xs dim">/ +{{ ENH_MAX }} · 词条效果 +{{ (itemView.enh || 0) * 5 }}%{{ g.enhanceDiscount > 0 ? ` · 炼器房折扣 -${Math.round(g.enhanceDiscount * 100)}%` : '' }}</span></span>
             <button class="btn btn-xs btn-gold" :disabled="(itemView.enh || 0) >= ENH_MAX" @click="g.enhanceItem(itemView.id)">
-              {{ (itemView.enh || 0) >= ENH_MAX ? '已 满 级' : `强化 → +${(itemView.enh || 0) + 1}（灵石${fmt(enhCost.lingshi)} · 灵脉石${enhCost.lingmai}）` }}
+              {{ (itemView.enh || 0) >= ENH_MAX ? '已 满 级' : `强化 → +${(itemView.enh || 0) + 1}（灵石${fmt(enhCost.lingshi)} · 开脉石${enhCost.lingmai}）` }}
             </button>
           </div>
         </div>
@@ -292,9 +293,13 @@
       <!-- 仙途纪事 -->
       <template v-else-if="top.kind === 'story' && storyView">
         <div class="modal-title gold">仙 途 纪 事 · {{ storyView.n }}</div>
-        <p class="my-3 leading-relaxed">{{ storyView.text }}</p>
-        <div class="flex flex-col gap-2">
+        <div class="text-center text-xs dim mb-2">{{ storyView.s }}</div>
+        <div class="story-body">
+          <p v-for="(para, i) in storyView.text" :key="i" class="story-p">{{ para }}</p>
+        </div>
+        <div class="flex flex-col gap-2 mt-3">
           <button v-for="(c, i) in storyView.choices" :key="i" class="btn w-full" @click="g.resolveStory(storyView.id, i)">{{ c.l }}</button>
+          <button v-if="!storyView.choices.length" class="btn btn-gold w-full" @click="g.finishStory(storyView.id)">收 卷</button>
         </div>
       </template>
 
@@ -323,7 +328,7 @@
             <span v-if="npcView.rel !== 'none'" class="chip chip-gold ml-1">{{ relName(npcView.rel) }}</span></div>
           <div class="mt-1">喜好：<span v-for="t in likes" :key="t" class="chip chip-jade mr-1">{{ t }}类</span><span class="dim2">（送对应礼物好感×2.5）</span></div>
           <div class="mt-1 dim">随身宝物：{{ belongings.join('、') }}</div>
-          <div class="mt-1 dim2">今日已赠礼 {{ giftCount }}/{{ g.giftMax }} · 已指点 {{ teachCount }}/5</div>
+          <div class="mt-1 dim2">今日已赠礼 {{ giftCount }}/{{ g.giftMax }} · 已教导 {{ teachCount }}/5 · 已叙话 {{ chatCount }}/1</div>
         </div>
         <div class="panel !p-2 mb-2">
           <div class="text-xs gold mb-1">赠 礼（持有）</div>
@@ -335,9 +340,23 @@
           </div>
           <button class="btn btn-xs mt-1" @click="g.giftNpc(npcView.id)">灵石礼金（1000灵石）</button>
         </div>
+        <div v-if="g.ownSect || npcView.inSect" class="panel !p-2 mb-2 text-xs">
+          <div class="flex justify-between items-center gap-2 flex-wrap">
+            <span v-if="npcView.inSect" class="jade">本门门人 · 荣辱与共（宗门任务与宗门战倚为臂助）</span>
+            <span v-else>
+              延揽入【{{ g.sect }}】：好感≥80 <b :class="npcView.favor >= 80 ? 'jade' : 'red'">{{ npcView.favor >= 80 ? '✓' : '✗' }}</b>
+              · 战力不弱于对方 <b :class="g.derived.power >= powerOf(npcView) ? 'jade' : 'red'">{{ g.derived.power >= powerOf(npcView) ? '✓' : '✗' }}</b>
+              · 非仇敌 <b :class="npcView.rel === 'enemy' ? 'red' : 'jade'">{{ npcView.rel === 'enemy' ? '✗' : '✓' }}</b>
+              <span class="dim2">（门人上限 8）</span>
+            </span>
+            <button v-if="!npcView.inSect" class="btn btn-xs btn-gold shrink-0" @click="g.recruitToSect(npcView.id)">邀 入 宗 门</button>
+            <button v-else class="btn btn-xs shrink-0" @click="g.dismissFromSect(npcView.id)">请 离 宗 门</button>
+          </div>
+        </div>
         <div class="flex gap-1 flex-wrap justify-center">
           <button class="btn btn-sm" @click="g.duelNpc(npcView.id); g.closeModal()">切磋</button>
-          <button class="btn btn-sm" @click="g.teachNpc(npcView.id)">指点</button>
+          <button class="btn btn-sm" @click="g.chatNpc(npcView.id)">{{ powerOf(npcView) > g.derived.power ? '请 教' : '指 点' }}</button>
+          <button class="btn btn-sm" @click="g.teachNpc(npcView.id)">教 导</button>
           <button v-if="npcView.rel === 'lover'" class="btn btn-sm btn-gold" @click="g.shuangxiu(npcView.id)">双修</button>
           <button v-else class="btn btn-sm" @click="g.proposeNpc(npcView.id)">结为道侣</button>
           <button v-if="npcView.rel === 'none'" class="btn btn-sm" @click="g.masterNpc(npcView.id)">拜师</button>
@@ -372,8 +391,14 @@
           <div class="dim2 mt-1">资质均值 {{ beastAvgTxt }} → 资质等级【{{ beastGradeTxt }}】；吞食同种灵兽即可升阶并随机提升一项资质。</div>
         </div>
         <div class="panel !p-2 mb-2 text-xs">
-          <div class="gold">助战技：{{ beastSkillsText }}</div>
-          <div class="dim mt-0.5">经验 {{ beastView.exp }}/{{ beastNeed }}</div>
+          <div class="gold mb-1">天 赋 技（出战即生效）</div>
+          <div v-if="!beastBaseSkills.length" class="dim2">无</div>
+          <div v-for="p in beastBaseSkills" :key="p.id" class="jade">【{{ p.name }}】{{ procEffectText(p) }}<span class="dim2"> · 触发率 {{ Math.round(p.chance * 100) }}%</span></div>
+          <div class="gold mt-2 mb-1">阶 位 技（升 阶 解 锁）</div>
+          <div v-for="(p, i) in BEAST_STAGE_SKILLS" :key="p.id" :class="i < (beastView.stage || 0) ? 'jade' : 'dim2'">
+            【{{ p.name }}】{{ procEffectText(p) }}<span class="dim2"> · 触发率 {{ Math.round(p.chance * 100) }}%{{ i < (beastView.stage || 0) ? '' : ` · ${BEAST_STAGES[i + 1]}解锁` }}</span>
+          </div>
+          <div class="dim mt-1">经验 {{ beastView.exp }}/{{ beastNeed }}</div>
         </div>
         <div class="flex gap-1 flex-wrap justify-center">
           <button class="btn btn-sm" :class="g.beastActive === beastView.id ? '' : 'btn-gold'" @click="g.setBeast(g.beastActive === beastView.id ? null : beastView.id)">
@@ -410,6 +435,11 @@
           <div class="gold mb-1">出战加成（随等级/星级提升）</div>
           <div v-for="(line, i) in famView.mods" :key="i" class="dim">{{ line }}</div>
           <div class="dim2 mt-1">升星 +25%/星、升级 +8%/级；喂同种精怪升阶。</div>
+        </div>
+        <div class="panel !p-2 mb-2 text-xs">
+          <div class="gold mb-1">战斗技【{{ famView.def.sk }}】<span class="dim2">（出战位时战斗中自动触发）</span></div>
+          <div class="jade">{{ famView.def.skDesc }}</div>
+          <div class="dim2 mt-1">效果随等级/星级成长；受「强化灵兽 / 弱化灵兽」属性影响；与灵兽（主动出手）不同。</div>
         </div>
         <div class="panel !p-2 mb-2 text-xs">
           <div class="flex justify-between items-center">
@@ -507,10 +537,39 @@
         <button class="btn w-full mt-2" @click="g.closeModal()">关 闭</button>
       </template>
 
-      <!-- 活动日历 -->
+      <!-- 活动日历 + 限时活动 -->
       <template v-else-if="top.kind === 'activity'">
         <div class="modal-title">活 动 日 历</div>
-        <div class="text-center text-xs dim mb-2">游戏月 = 10 天（压缩循环）</div>
+        <!-- 限时活动：任务→代币→商店 -->
+        <div v-if="evDef && g.activity" class="panel mt-1">
+          <div class="flex justify-between items-center flex-wrap gap-1">
+            <b class="gold">{{ evDef.icon }} {{ evDef.n }}（限时活动）</b>
+            <span class="text-xs">持有 <b class="gold">{{ evCoins }}</b> {{ evDef.coin }} · 剩 {{ fmtTime(endIn(g.activity)) }}</span>
+          </div>
+          <div class="text-xs dim mt-1">{{ evDef.desc }}</div>
+          <div class="text-xs mt-2 jade">— 活动任务 —</div>
+          <div v-for="t in evDef.tasks" :key="t.id" class="flex justify-between items-center py-0.5 text-xs gap-2">
+            <span class="min-w-0">{{ t.n }}</span>
+            <span class="shrink-0 flex items-center gap-1.5">
+              <span class="dim">{{ Math.min(evCount(t.type), t.target) }}/{{ t.target }}</span>
+              <button v-if="evClaimed(t.id)" class="btn btn-xs" disabled>已领取</button>
+              <button v-else-if="evCount(t.type) >= t.target" class="btn btn-xs btn-gold" @click="g.claimEvtTask(t.id)">领 {{ evDef.coin }}×{{ t.coins }}</button>
+              <span v-else class="dim2">{{ evDef.coin }}×{{ t.coins }}</span>
+            </span>
+          </div>
+          <div class="text-xs mt-2 jade">— 兑换商店 —</div>
+          <div v-for="s in evDef.shop" :key="s.id" class="flex justify-between items-center py-0.5 text-xs gap-2">
+            <span class="min-w-0">{{ s.n }}<span class="dim2"> · {{ s.desc }}</span></span>
+            <span class="shrink-0 flex items-center gap-1.5">
+              <span class="dim">限购 {{ evBought(s.id) }}/{{ s.limit }}</span>
+              <button v-if="evBought(s.id) >= s.limit" class="btn btn-xs" disabled>已售罄</button>
+              <button v-else class="btn btn-xs" :class="evCoins >= s.cost ? 'btn-gold' : ''" :disabled="evCoins < s.cost" @click="g.buyEvt(s.id)">兑 {{ s.cost }} {{ evDef.coin }}</button>
+            </span>
+          </div>
+        </div>
+        <div v-else class="text-center text-xs dim2 mt-1">当前无进行中的限时活动（随天象轮转开启）</div>
+
+        <div class="text-center text-xs dim mt-2 mb-1">天象轮转 · 游戏月 = 10 天（压缩循环）</div>
         <div v-for="a in ACTIVITIES" :key="a.id" class="flex justify-between items-center py-1 text-sm" :class="isActive(a) ? 'gold' : 'dim'">
           <div><b>{{ a.n }}</b> <span class="text-xs dim ml-1">{{ a.desc }}</span></div>
           <span class="text-xs shrink-0">{{ isActive(a) ? `进行中 · 剩 ${fmtTime(endIn(a))}` : `还有 ${fmtTime(startIn(a))}` }}</span>
@@ -533,18 +592,42 @@
 
       <!-- 仙途纪事卷宗 -->
       <template v-else-if="top.kind === 'storybook'">
-        <div class="modal-title">仙 途 纪 事</div>
-        <div class="text-center text-xs dim mb-2">{{ g.story.done.length }}/{{ STORY.length }} 卷 · 主线嵌入问道长阶，隐藏章特殊触发</div>
-        <div v-for="sc in STORY" :key="sc.id" class="flex justify-between items-center py-1 text-sm gap-2">
+        <div class="modal-title">仙 途 纪 事 · 卷 宗</div>
+        <div class="text-center text-xs dim mb-2">《长生劫》正卷 · {{ storyDoneCount }}/{{ g.storyList.length }} 卷已阅 · 各卷嵌入问道长阶</div>
+        <div v-for="(sc, i) in g.storyList" :key="sc.id" class="flex justify-between items-center py-1 text-sm gap-2">
           <span class="min-w-0">
-            <b :class="storyState(sc) === 'ready' ? 'gold' : 'dim2'">{{ sc.hidden && storyState(sc) !== 'ready' ? '？？？' : sc.n }}</b>
-            <span class="text-xs dim ml-1">{{ storyState(sc) === 'ready' ? sc.s : storyState(sc) === 'done' ? '已完结' : sc.condText }}</span>
+            <b class="block" :class="storyState(sc) === 'ready' ? 'gold' : 'dim2'">第{{ CN_NUM[i] || (i + 1) }}卷 · {{ sc.hidden && storyState(sc) !== 'ready' ? '？？？' : sc.n }}</b>
+            <span class="text-xs dim block">{{ storyState(sc) === 'ready' ? sc.s : storyState(sc) === 'done' ? '已阅' : sc.hidden ? '特殊机缘触发' : `通关问道长阶 · 第 ${sc.stage} 阶` }}</span>
           </span>
           <button v-if="storyState(sc) === 'ready'" class="btn btn-xs btn-gold shrink-0" @click="g.openStory(sc.id)">阅 卷</button>
           <span v-else-if="storyState(sc) === 'done'" class="text-xs jade shrink-0">✓ 已阅</span>
           <span v-else class="text-xs dim2 shrink-0">未解锁</span>
         </div>
         <button class="btn w-full mt-2" @click="g.closeModal()">关 闭</button>
+      </template>
+
+      <!-- 龙脉挖掘（进度条 + 产物展示） -->
+      <template v-else-if="top.kind === 'dig' && g.mineBusy">
+        <div class="modal-title gold">龙 脉 挖 掘</div>
+        <template v-if="!g.mineBusy.done">
+          <div class="text-center text-xs dim mb-2">挥镐开凿，灵气如泉……（{{ g.mineBusy.count }} 次 · 耗开脉石 ×{{ g.mineBusy.cost }}）</div>
+          <div class="pbar"><div class="pfill" :style="{ width: digPct + '%' }"></div></div>
+          <div class="text-center text-xs dim2 mt-1">{{ Math.round(digPct) }}%</div>
+        </template>
+        <template v-else>
+          <div class="text-center text-xs gold mb-1">✦ 收 获 · 共 {{ g.mineBusy.eqs.length }} 件 ✦</div>
+          <div class="text-center text-xs dim2 mb-2">已耗开脉石 ×{{ g.mineBusy.cost }} · 现存 {{ fmt(g.res.lingmai) }}（点卡片可详阅）</div>
+          <div class="flex flex-col gap-2 max-h-72 overflow-y-auto">
+            <div v-for="it in mineSorted" :key="it.id" class="itemcard cursor-pointer" @click="g.pushModal('item', it)">
+              <div class="flex justify-between items-center gap-2">
+                <span class="min-w-0"><b :class="'qc' + it.q">{{ it.name }}</b> <span class="chip ml-1">{{ qName(it.q) }}</span> <span class="chip ml-1">Lv.{{ it.level }}</span> <span class="chip ml-1">{{ SLOT_NAMES[it.slot] }}</span></span>
+                <span class="text-xs shrink-0">评分 <b class="gold">{{ fmt(it.score) }}</b></span>
+              </div>
+            </div>
+            <div v-if="!g.mineBusy.eqs.length" class="text-center text-sm dim2 py-3">这一铲下去，只掘出碎石……（消耗不返）</div>
+          </div>
+          <button class="btn btn-gold w-full mt-2" @click="g.mineDigClaim()">收 入 囊 中</button>
+        </template>
       </template>
 
       <!-- 设置 -->
@@ -563,13 +646,13 @@
         <textarea v-if="expo" v-model="expo" class="w-full mt-2 text-xs p-2" rows="3" style="background: #0f0c08; border: 1px solid var(--line2); border-radius: 6px; color: var(--dim)" readonly></textarea>
         <div class="text-xs dim mt-2 mb-1">导入存档（粘贴导出码）：</div>
         <div class="flex gap-2">
-          <input v-model="imp" class="btn !min-h-8 flex-1 text-xs" style="color: var(--txt); background: #1c1712" placeholder="粘贴存档码…" />
+          <input v-model="imp" class="btn !min-h-8 flex-1 min-w-0 text-xs" style="color: var(--txt); background: #1c1712" placeholder="粘贴存档码…" />
           <button class="btn btn-sm" :disabled="!imp" @click="doImport">导 入</button>
         </div>
         <div class="divider"></div>
         <div class="text-xs gold mb-1">礼 包 码</div>
         <div class="flex gap-2">
-          <input v-model="codeInput" class="btn !min-h-8 flex-1 text-xs" style="color: var(--txt); background: #1c1712" placeholder="输入礼包码，如 CHANGSHENG" @keyup.enter="doRedeem" />
+          <input v-model="codeInput" class="btn !min-h-8 flex-1 min-w-0 text-xs" style="color: var(--txt); background: #1c1712" placeholder="输入礼包码，如 CHANGSHENG" @keyup.enter="doRedeem" />
           <button class="btn btn-sm btn-gold" :disabled="!codeInput.trim()" @click="doRedeem">兑 换</button>
         </div>
         <button class="btn btn-xs w-full mt-1" @click="showCodes = !showCodes">{{ showCodes ? '收起礼包码一览' : '查看本版本礼包码一览（公榜）' }}</button>
@@ -589,7 +672,7 @@
         <div class="text-xs dim leading-relaxed">
           <p class="py-0.5">· 挂机涨修为，修为满可突破；大境界突破触发雷劫，需在渡劫中选择应对方式。</p>
           <p class="py-0.5">· 问道长阶（首页）是主线推进器：通关得大礼、每 10 阶永久悟道加成，特定关卡解锁仙途纪事。</p>
-          <p class="py-0.5">· 灵脉石用于灵脉挖掘，产出装备与副产物；装备品质 1~16 级，携带随机词条与灵纹。</p>
+          <p class="py-0.5">· 开脉石用于开凿龙脉（每次挖掘消耗），来源：挂机吐纳 / 副本 / 宝箱；挖掘产出装备与副产物；装备品质 1~16 级，携带随机词条与灵纹。</p>
           <p class="py-0.5">· 六件装备的词条组合可激活 34 种共鸣（详见修炼页「共鸣详情」），是战力核心。</p>
           <p class="py-0.5">· 灵兽提供「给主人的加成」：吞食同种升阶并随机提升一项资质；精怪喂同种升阶。</p>
           <p class="py-0.5">· 坊市摆摊/拍卖/寄售/黑市/以物易物/仙玉阁，是资源循环与变强的重要渠道。</p>
@@ -615,11 +698,11 @@ import { useGame, DAILY_TASKS } from '../stores/game'
 import { fmt, fmtTime } from '../core/format'
 import { ACTIVITIES, CYCLE_DAYS, ENCOUNTERS, ENC_NAMES, type ActivityDef } from '../data/world'
 import { AFFIX_MAP, RUNE_MAP, SLOT_NAMES, equipContrib, qColor, qName } from '../data/qualities'
-import { ENH_MAX, enhanceCost } from '../core/equip'
+import { ENH_MAX, enhanceCost, procEffectText } from '../core/equip'
 import { MAJOR } from '../data/realms'
 import { GOALS, ONLINE_REWARDS } from '../data/meta'
 import { MONTH_DAYS, PAY_PACKS, monthReward, newbieReward, realmGift, rewardBrief, type PayPack } from '../data/rewards'
-import { STORY, STORY_MAP } from '../data/story'
+import { STORY_MAP } from '../data/mainstory'
 import { REDEEM_CODES } from '../data/codes'
 import { TRAITS, TRAIT_MAP } from '../data/traits'
 import { setAudio, setMusic } from '../core/sfx'
@@ -637,6 +720,13 @@ const g = useGame()
 const top = computed(() => g.modals[0] as { kind: string; data?: unknown } | undefined)
 // 镇妖塔增幅三选一选项
 const towerOfferDefs = computed(() => ((g.tower.offer?.ids) || []).map(id => TOWER_BUFF_MAP[id]).filter((b): b is NonNullable<typeof b> => !!b))
+
+// —— 限时活动 ——
+const evDef = computed(() => g.currentEvt)
+const evCoins = computed(() => g.evtCoins)
+function evCount(t: string): number { return g.evt.counts[t] || 0 }
+function evClaimed(taskId: string): boolean { return !!evDef.value && g.evt.claimed.includes(`${evDef.value.id}:${taskId}`) }
+function evBought(skuId: string): number { return evDef.value ? (g.evt.bought[`${evDef.value.id}:${skuId}`] || 0) : 0 }
 
 // —— 战斗逐行播放 ——
 const shown = ref(0)
@@ -657,6 +747,21 @@ function skipBattle() { shown.value = g.battle?.log.length || 0; stopReveal() }
 watch(() => g.battle, b => { if (b && top.value?.kind === 'battle') startReveal() })
 watch(top, t => { if (t?.kind === 'battle' && g.battle) startReveal(); else stopReveal() })
 onUnmounted(stopReveal)
+
+// —— 龙脉挖掘：进度刷新与产物排序 ——
+const digT = ref(Date.now())
+let digTimer: number | undefined
+watch(() => top.value?.kind, k => {
+  if (digTimer != null) { window.clearInterval(digTimer); digTimer = undefined }
+  if (k === 'dig') digTimer = window.setInterval(() => { digT.value = Date.now() }, 80)
+})
+onUnmounted(() => { if (digTimer != null) window.clearInterval(digTimer) })
+const digPct = computed(() => {
+  const b = g.mineBusy
+  if (!b) return 0
+  return Math.min(100, Math.max(0, ((digT.value - b.t0) / b.dur) * 100))
+})
+const mineSorted = computed(() => (g.mineBusy ? [...g.mineBusy.eqs].sort((a, b) => b.score - a.score) : []))
 
 function d(field: string): unknown {
   const data = (top.value?.data || {}) as Record<string, unknown>
@@ -709,6 +814,9 @@ const storyView = computed(() => {
   if (t?.kind !== 'story') return null
   return STORY_MAP[String(t.data)] || null
 })
+// 卷宗：已阅计数与中文序号
+const CN_NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '二十一', '二十二', '二十三', '二十四', '二十五', '二十六', '二十七', '二十八', '二十九', '三十']
+const storyDoneCount = computed(() => g.storyList.filter(c => g.story.done.includes(c.id)).length)
 
 // —— 切磋邀约 ——
 const duelView = computed<Npc | null>(() => {
@@ -731,6 +839,7 @@ const likes = computed(() => (npcView.value ? npcLikes(npcView.value.id) : []))
 const ownedGifts = computed(() => GIFTS.filter(x => (g.mats[x.id] || 0) > 0))
 const giftCount = computed(() => (npcView.value ? g.npcDaily.gift[npcView.value.id] || 0 : 0))
 const teachCount = computed(() => (npcView.value ? g.npcDaily.teach[npcView.value.id] || 0 : 0))
+const chatCount = computed(() => (npcView.value ? g.npcDaily.chat[npcView.value.id] || 0 : 0))
 const belongings = computed(() => {
   const n = npcView.value
   if (!n) return []
@@ -764,15 +873,9 @@ const beastAdv = computed(() => {
   const b = beastView.value
   if (!b) return { s: 0, l: 0 }
   const stage = b.stage || 0
-  return { s: 20 * (stage + 1) * (stage + 1), l: Math.round(3000 * Math.pow(1.5, g.lv) * (stage + 1)) }
+  return { s: 20 * (stage + 1) * (stage + 1), l: Math.round(3000 * Math.pow(1.04069, g.lv) * (stage + 1)) }
 })
-const beastSkillsText = computed(() => {
-  const b = beastView.value
-  if (!b) return '无'
-  const base = (BEAST_MAP[b.kind]?.procs || []).map(p => p.name)
-  const unlocked = BEAST_STAGE_SKILLS.slice(0, b.stage || 0).map(p => p.name)
-  return [...base, ...unlocked].join('、') || '无'
-})
+const beastBaseSkills = computed(() => (beastView.value ? (BEAST_MAP[beastView.value.kind]?.procs || []) : []))
 function qualName(k: string) { return { atk: '攻击资质', def: '防御资质', hp: '气血资质', spd: '速度资质' }[k] || k }
 function beastQual(k: string): number {
   const q = beastView.value?.qual
@@ -818,7 +921,12 @@ const slotEq = computed<Equip | null>(() => {
   if (id == null || id === it.id) return null
   return g.inventory.find(x => x.id === id) || null
 })
-const diff = computed(() => (itemView.value && slotEq.value ? itemView.value.score - slotEq.value.score : 0))
+// 穿戴后战力差值：临时换装实测（精确，含共鸣/铭纹联动）
+const powerDiff = ref(0)
+watch(() => itemView.value?.id, () => {
+  const it = itemView.value
+  powerDiff.value = it ? Math.round(g.powerWithEquip(it) - g.derived.power) : 0
+}, { immediate: true })
 const enhCost = computed(() => {
   if (!itemView.value) return { lingshi: 0, lingmai: 0 }
   const c = enhanceCost(itemView.value)
@@ -830,7 +938,7 @@ function reforgeCostStr(mode: 'value' | 'type'): string {
   return mode === 'value' ? `洗炼石×${3 + lockCount.value * 2}` : `改命石×${1 + lockCount.value}`
 }
 // —— 与当前穿戴装备的属性差异对比 ——
-const CMP_ORDER = ['atk', 'def', 'hp', 'spd', 'crit', 'critDmg', 'combo', 'hit', 'dodge', 'lifesteal', 'reflect', 'armorPen', 'dmgReduce', 'shieldPow', 'qiRegen', 'cdr', 'execute', 'daoyun', 'kalpaFire', 'devour', 'reincarnate', 'stun', 'counter', 'resistStun', 'resistCrit', 'resistCombo', 'resistCounter', 'resistLifesteal', 'allP', 'atkP', 'defP', 'hpP', 'spdP', 'dmgP']
+const CMP_ORDER = ['atk', 'def', 'hp', 'spd', 'crit', 'critDmg', 'combo', 'hit', 'dodge', 'lifesteal', 'reflect', 'armorPen', 'dmgReduce', 'shieldPow', 'qiRegen', 'cdr', 'execute', 'daoyun', 'kalpaFire', 'devour', 'reincarnate', 'stun', 'counter', 'resistStun', 'resistCrit', 'resistCombo', 'resistCounter', 'resistLifesteal', 'dmgBoost', 'healBoost', 'healCut', 'beastBoost', 'beastCut', 'allP', 'atkP', 'defP', 'hpP', 'spdP', 'dmgP']
 const CMP_PSEUDO: Record<string, string> = { allP: '全属性', atkP: '攻击', defP: '防御', hpP: '气血', spdP: '速度' }
 const cmpPct = (k: string) => !!CMP_PSEUDO[k] || !!AFFIX_MAP[k]?.pct
 const cmpName = (k: string) => (CMP_PSEUDO[k] ? CMP_PSEUDO[k] + '%' : AFFIX_MAP[k]?.n || k)

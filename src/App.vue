@@ -6,26 +6,28 @@
         <div class="text-center text-3xl gold font-bold tracking-[0.35em] my-3">长 生 劫</div>
         <p class="text-center dim text-xs mb-4">单机放置修仙 · 长生路上多劫难，问君能渡几重天</p>
 
-        <label class="text-xs dim">道 号</label>
-        <input
-          v-model="name"
-          class="btn !min-h-9 w-full mb-3 justify-start"
-          style="color: var(--txt); background: #1c1712"
-          maxlength="8"
-          placeholder="请为道友取个道号…"
-        />
+        <label class="text-xs dim">姓 名</label>
+        <div class="flex gap-2 mb-3">
+          <input
+            v-model="realName"
+            class="btn !min-h-9 flex-1 min-w-0 justify-start"
+            style="color: var(--txt); background: #1c1712"
+            maxlength="4"
+            placeholder="姓甚名谁…"
+          />
+          <button class="btn btn-sm shrink-0" @click="realName = randomRealName()">随 机</button>
+        </div>
 
-        <label class="text-xs dim">出 身</label>
-        <div class="grid grid-cols-2 gap-1 my-1 mb-3">
-          <div
-            v-for="(o, i) in ORIGINS" :key="i"
-            class="panel !p-2 cursor-pointer text-xs"
-            :class="origin === i ? 'ring-1 ring-yellow-600/70' : ''"
-            @click="origin = i"
-          >
-            <b class="gold">{{ o.n }}</b>
-            <div class="dim">{{ o.desc }}</div>
-          </div>
+        <label class="text-xs dim">道 号</label>
+        <div class="flex gap-2 mb-3">
+          <input
+            v-model="name"
+            class="btn !min-h-9 flex-1 min-w-0 justify-start"
+            style="color: var(--txt); background: #1c1712"
+            maxlength="8"
+            placeholder="如：青云散人"
+          />
+          <button class="btn btn-sm shrink-0" @click="name = randomDaoName()">随 机</button>
         </div>
 
         <div class="panel !p-3 mb-3">
@@ -40,7 +42,7 @@
         </div>
 
         <div class="panel !p-3 text-center text-sm mb-3">
-          <div>天生灵根：<b class="jade text-lg">{{ g.root.n }}</b> <span class="dim">修行 ×{{ g.root.mult }}</span></div>
+          <div>天生灵根：<b class="text-lg" :style="{ color: g.rootColor }">{{ g.root.n }}</b> <span class="dim">修行 ×{{ g.root.mult }}</span></div>
           <div class="dim text-xs mt-1">{{ g.root.desc }}</div>
           <div v-if="g.physique" class="gold text-xs mt-1">体质觉醒：{{ g.physique }}</div>
           <button class="btn btn-xs mt-2" @click="g.rerollRoot()">重掷灵根（不限次）</button>
@@ -74,7 +76,7 @@
           </div>
           <div class="flex gap-2 flex-wrap items-center num">
             <span>灵石 <b class="gold">{{ fmt(g.res.lingshi) }}</b></span>
-            <span>灵脉石 <b class="gold">{{ fmt(g.res.lingmai) }}</b></span>
+            <span>开脉石 <b class="gold">{{ fmt(g.res.lingmai) }}</b></span>
             <span>仙玉 <b class="violet">{{ fmt(g.res.xianyu) }}</b></span>
             <span class="hidden sm:inline">洗练 <b class="gold">{{ g.res.xilian }}</b></span>
             <span class="hidden sm:inline">共鸣 <b class="gold">{{ g.res.gongming }}</b></span>
@@ -110,7 +112,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGame } from './stores/game'
-import { ORIGINS } from './data/world'
+import { randomDaoName, randomRealName } from './data/names'
 import { fmt } from './core/format'
 import { startMusic } from './core/sfx'
 import { TRAIT_MAP, TRAITS } from './data/traits'
@@ -133,8 +135,16 @@ import PanelStage from './panels/PanelStage.vue'
 
 const g = useGame()
 const name = ref('')
-const origin = ref(0)
+const realName = ref('')
 const TRAIT_COUNT = TRAITS.length
+// 开局界面：进入时以当前转世加成重掷灵根（startGame 将沿用展示结果，不会再变），并预填随机姓名/道号
+function initStartFields() {
+  g.rerollRoot()
+  if (!name.value) name.value = randomDaoName()
+  if (!realName.value) realName.value = randomRealName()
+}
+watch(() => g.started, s => { if (!s) initStartFields() })
+onMounted(() => { if (!g.started) initStartFields() })
 
 function attrVal(k: string): number {
   return (g.attrs as unknown as Record<string, number>)[k] || 0
@@ -207,7 +217,7 @@ function goTab(t: string) {
 }
 
 function start() {
-  g.startGame(name.value.trim(), origin.value)
+  g.startGame(name.value.trim(), realName.value.trim())
 }
 
 // 闪光与震动

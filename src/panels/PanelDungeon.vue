@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col gap-3">
     <div class="panel text-xs dim flex items-center justify-between gap-2 flex-wrap">
-      <span>副本每日/每周刷新。通关后可消耗「扫荡券」扫荡（持有 {{ g.res.sweep }} 张），扫荡同样消耗副本次数。难度越高，产出倍率越高。</span>
-      <button class="btn btn-sm" @click="g.sweepAll()">一键扫荡（用券）</button>
+      <span>副本每日/每周刷新。通关后可消耗「扫荡券」扫荡（持有 {{ g.res.sweep }} 张）<b class="gold">，月卡期间免券扫荡</b>，扫荡同样消耗副本次数。难度越高，产出倍率越高。</span>
+      <button class="btn btn-sm" @click="g.sweepAll()">一键扫荡</button>
     </div>
 
     <!-- 日常副本 -->
@@ -33,7 +33,7 @@
           <button class="btn btn-sm flex-1" :disabled="attempts(d.id).used >= attempts(d.id).max" @click="g.enterDungeon(d.id, dsel[d.id] || 0)">挑 战</button>
           <button
             class="btn btn-sm"
-            :disabled="!g.tower.cleared[d.id + '_' + (dsel[d.id] || 0)] || g.res.sweep < 1 || attempts(d.id).used >= attempts(d.id).max"
+            :disabled="!g.tower.cleared[d.id + '_' + (dsel[d.id] || 0)] || (!g.monthActive && g.res.sweep < 1) || attempts(d.id).used >= attempts(d.id).max"
             @click="g.sweepDungeon(d.id, dsel[d.id] || 0)"
           >扫荡（券×1）</button>
         </div>
@@ -114,7 +114,7 @@
         <div class="text-xs dim mt-1">次数 {{ attempts('leiyuan').used }} / {{ attempts('leiyuan').max }} · 重置 {{ fmtTime(resetIn(weeklyDungeon('leiyuan')!) ) }}</div>
         <div class="flex gap-2 mt-2">
           <button class="btn btn-sm flex-1" :disabled="attempts('leiyuan').used >= attempts('leiyuan').max" @click="g.enterDungeon('leiyuan', 0)">探 索</button>
-          <button class="btn btn-sm" :disabled="!g.tower.cleared['leiyuan_0'] || g.res.sweep < 1 || attempts('leiyuan').used >= attempts('leiyuan').max" @click="g.sweepDungeon('leiyuan', 0)">扫荡</button>
+          <button class="btn btn-sm" :disabled="!g.tower.cleared['leiyuan_0'] || (!g.monthActive && g.res.sweep < 1) || attempts('leiyuan').used >= attempts('leiyuan').max" @click="g.sweepDungeon('leiyuan', 0)">扫荡</button>
         </div>
       </div>
       <div class="panel">
@@ -125,7 +125,7 @@
         <div class="text-xs dim mt-1">次数 {{ attempts('guxu').used }} / {{ attempts('guxu').max }}</div>
         <div class="flex gap-2 mt-2">
           <button class="btn btn-sm flex-1" :disabled="attempts('guxu').used >= attempts('guxu').max" @click="g.enterDungeon('guxu', 0)">探 索</button>
-          <button class="btn btn-sm" :disabled="!g.tower.cleared['guxu_0'] || g.res.sweep < 1 || attempts('guxu').used >= attempts('guxu').max" @click="g.sweepDungeon('guxu', 0)">扫荡</button>
+          <button class="btn btn-sm" :disabled="!g.tower.cleared['guxu_0'] || (!g.monthActive && g.res.sweep < 1) || attempts('guxu').used >= attempts('guxu').max" @click="g.sweepDungeon('guxu', 0)">扫荡</button>
         </div>
       </div>
       <div class="panel md:col-span-2">

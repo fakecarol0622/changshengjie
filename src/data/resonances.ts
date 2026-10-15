@@ -1,4 +1,4 @@
-// ===== 33 种核心共鸣 + 6 种宗门共鸣 =====
+// ===== 20 种核心共鸣 + 6 种宗门共鸣（第18批：仅保留高级共鸣）=====
 // 旧的“基础属性堆叠型/双属性组合型”共鸣已废止（太易达成且强度过高）；
 // 新增 M 铭纹共鸣：品质 10+ 装备自带铭纹（炎/寒/雷/风/岩/幽/星/龙），铭纹之间互相共鸣。
 import type { Eff, Equip, Proc, Stats } from '../types'
@@ -21,7 +21,7 @@ export interface ResCtx {
 export interface ResDef {
   id: string
   name: string
-  cls: 'M' | 'C' | 'D' | 'E' | '宗'
+  cls: 'M' | 'E' | '宗'
   req: string
   desc: string
   check: (c: ResCtx) => boolean
@@ -31,7 +31,6 @@ export interface ResDef {
 const P = (id: string, name: string, trigger: Proc['trigger'], chance: number, eff: Eff, desc: string, once = false): Proc =>
   ({ id, name, trigger, chance, eff, desc, once })
 
-const eqCount = (c: ResCtx, pred: (e: Equip) => boolean) => c.equipped.filter(pred).length
 const mul = (s: Stats, f: number) => { s.atk *= f; s.def *= f; s.hp *= f }
 
 export const RESONANCES: ResDef[] = [
@@ -130,110 +129,6 @@ export const RESONANCES: ResDef[] = [
     check: c => (c.tags['wind'] || 0) >= 2 && (c.tags['shadow'] || 0) >= 2,
     apply: s => { s.dodge += 10; s.counter += 8 },
   },
-  // ===== C 类 · 装备件数型 =====
-  {
-    id: 'tianqi', name: '天器·合', cls: 'C', req: '≥4件天器（品质9+）',
-    desc: '全属性+15%',
-    check: c => eqCount(c, e => e.q >= 9) >= 4,
-    apply: s => mul(s, 1.15),
-  },
-  {
-    id: 'xianbing', name: '仙兵·鸣', cls: 'C', req: '≥3件仙兵（品质11+）',
-    desc: '全属性+25%，专属外观',
-    check: c => eqCount(c, e => e.q >= 11) >= 3,
-    apply: s => mul(s, 1.25),
-  },
-  {
-    id: 'daoqi', name: '道器·韵', cls: 'C', req: '≥2件道器（品质13+）',
-    desc: '全属性+40%，攻击附带道韵伤害',
-    check: c => eqCount(c, e => e.q >= 13) >= 2,
-    apply: s => { mul(s, 1.4); s.daoyun += 8 },
-  },
-  {
-    id: 'liuhe', name: '六合·同', cls: 'C', req: '6件同品质',
-    desc: '该品质之力共鸣，全属性+20%',
-    check: c => {
-      if (c.equipped.length < 6) return false
-      const q = c.equipped[0].q
-      return c.equipped.every(e => e.q === q)
-    },
-    apply: s => mul(s, 1.2),
-  },
-  {
-    id: 'hunyuan_yi', name: '混元·异', cls: 'C', req: '6件品质各不相同',
-    desc: '混元归一，全属性+30%',
-    check: c => {
-      if (c.equipped.length < 6) return false
-      return new Set(c.equipped.map(e => e.q)).size === 6
-    },
-    apply: s => mul(s, 1.3),
-  },
-  {
-    id: 'zhibao', name: '至宝·尊', cls: 'C', req: '≥1件至宝（品质15+）',
-    desc: '全属性+60%，战斗中施放专属技',
-    check: c => eqCount(c, e => e.q >= 15) >= 1,
-    apply: (s, pr) => {
-      mul(s, 1.6)
-      pr.push(P('res_zhibao', '至宝·尊', 'round', 0.15, { t: 'true', mult: 2 }, '至宝显威，造成200%攻击真实伤害'))
-    },
-  },
-  // ===== D 类 · 流派专精型 =====
-  {
-    id: 'leifa', name: '雷法·罚', cls: 'D', req: '雷系装备≥4件',
-    desc: '攻击附带雷罚，概率麻痹目标',
-    check: c => (c.flavor['雷系'] || 0) >= 4,
-    apply: (s, pr) => {
-      s.dmgP += 12
-      pr.push(P('res_leifa', '雷法·罚', 'attack', 0.2, { t: 'stun', rounds: 1 }, '雷霆麻痹，目标一回合无法行动'))
-    },
-  },
-  {
-    id: 'bingfeng', name: '冰封·冻', cls: 'D', req: '冰系装备≥4件',
-    desc: '概率冻结，冻结目标受到伤害+30%',
-    check: c => (c.flavor['冰系'] || 0) >= 4,
-    apply: (s, pr) => {
-      pr.push(P('res_bingfeng', '冰封·冻', 'attack', 0.15, { t: 'stun', rounds: 1 }, '寒霜冻结目标'))
-      pr.push(P('res_bingfeng2', '冰封·冻(易伤)', 'attack', 0.3, { t: 'defDown', pct: 30, rounds: 2 }, '冻结目标防御崩解'))
-    },
-  },
-  {
-    id: 'huofen', name: '火焚·燃', cls: 'D', req: '火系装备≥4件',
-    desc: '攻击附加灼烧，可叠加5层',
-    check: c => (c.flavor['火系'] || 0) >= 4,
-    apply: (s, pr) => {
-      pr.push(P('res_huofen', '火焚·燃', 'attack', 0.35, { t: 'dot', pct: 0.5, rounds: 3, name: '灼烧' }, '灼烧蔓延，持续焚身'))
-    },
-  },
-  {
-    id: 'jianxiu', name: '剑修·锋', cls: 'D', req: '剑类装备≥4件',
-    desc: '攻击+30%，概率追加一剑',
-    check: c => (c.flavor['剑类'] || 0) >= 4,
-    apply: (s, pr) => {
-      s.atk *= 1.3
-      pr.push(P('res_jianxiu', '剑修·锋', 'attack', 0.22, { t: 'extraHit', mult: 0.8 }, '剑意未消，追加一剑'))
-    },
-  },
-  {
-    id: 'tixiu', name: '体修·魄', cls: 'D', req: '炼体装备≥4件',
-    desc: '气血+50%，受击时反震伤害',
-    check: c => (c.flavor['炼体'] || 0) >= 4,
-    apply: s => { s.hp *= 1.5; s.reflect += 8 },
-  },
-  {
-    id: 'modao', name: '魔道·煞', cls: 'D', req: '魔系装备≥4件 + 业力>50',
-    desc: '伤害+40%，但每场战斗损失1%气血',
-    check: c => (c.flavor['魔系'] || 0) >= 4 && c.yeLi > 50,
-    apply: (s, pr) => {
-      s.dmgP += 40
-      pr.push(P('res_modao', '魔道·煞', 'start', 1, { t: 'selfHp', pct: -1 }, '魔功反噬，以血为祭'))
-    },
-  },
-  {
-    id: 'xiandao', name: '仙道·辉', cls: 'D', req: '仙系装备≥4件 + 功德>50',
-    desc: '全属性+20%，渡劫成功率+10%',
-    check: c => (c.flavor['仙系'] || 0) >= 4 && c.gongDe > 50,
-    apply: s => { mul(s, 1.2); s.tribBonus += 10 },
-  },
   // ===== E 类 · 隐藏/彩蛋型 =====
   {
     id: 'hundun', name: '混沌·源', cls: 'E', req: '五行（金木水火土）各≥1',
@@ -263,7 +158,7 @@ export const RESONANCES: ResDef[] = [
     apply: s => { mul(s, 1.3); s.dropLuck += 15 },
   },
   {
-    id: 'sanxiu_hun', name: '散修·魂', cls: 'E', req: '全身品质≤玄铁(4) 且星级≥4',
+    id: 'sanxiu_hun', name: '散修·魂', cls: 'E', req: '全身品质≤地品(4) 且星级≥4',
     desc: '全属性+35%，挖掘必出高星',
     check: c => c.equipped.length >= 1 && c.equipped.every(e => e.q <= 4 && e.stars >= 4),
     apply: s => { mul(s, 1.35); s.starFloor = Math.max(s.starFloor, 4) },

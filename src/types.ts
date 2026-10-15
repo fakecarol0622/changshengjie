@@ -48,6 +48,12 @@ export interface Stats {
   resistCombo: number // 抗连击
   resistCounter: number // 抗反击
   resistLifesteal: number // 抗吸血
+  // 增伤 / 治疗 / 灵兽体系（参考寻道大千）
+  dmgBoost: number // 增伤：造成伤害 +%
+  healBoost: number // 强化治疗：自身治疗量 +%
+  healCut: number // 弱化治疗：敌方治疗量 -%
+  beastBoost: number // 强化灵兽：己方灵兽/精怪技能效果 +%
+  beastCut: number // 弱化灵兽：敌方灵兽类技能效果 -%
   // 挖掘 / 生活类加成
   dropLuck: number // 出货率 %（影响品质权重与星级）
   starFloor: number // 星级保底（>0 时至少该星）
@@ -64,6 +70,7 @@ export interface Mods {
   qiRegenAdd?: number; cdrAdd?: number; dmgP?: number
   dropLuck?: number; starFloor?: number; pillBonus?: number; treasureBonus?: number; beastBonus?: number
   stunAdd?: number; counterAdd?: number; resistAllAdd?: number
+  dmgBoostAdd?: number; healBoostAdd?: number; healCutAdd?: number; beastBoostAdd?: number; beastCutAdd?: number
 }
 
 export type Eff =
@@ -90,6 +97,7 @@ export interface Proc {
   eff: Eff
   once?: boolean
   bossOnly?: boolean
+  src?: string // 来源标记：'pet'=灵兽/精怪技能（受强化/弱化灵兽影响）
 }
 
 export interface LogLine { t: string; c?: string }
@@ -164,6 +172,7 @@ export interface Npc {
   rel: 'none' | 'rival' | 'friend' | 'lover' | 'master' | 'disciple' | 'enemy'
   mateAt: number // 最近互动时间（道侣维系）
   power?: number
+  inSect?: boolean // 已受邀加入玩家自创宗门
 }
 
 export interface StallItem {

@@ -11,21 +11,21 @@ export const SLOT_NAMES: Record<SlotKey, string> = {
 export interface QualityDef { n: string; c: string; aff: number }
 // 词条数已整体上调（原 GDD：0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8）
 export const QUALITIES: QualityDef[] = [
-  { n: '顽石', c: '#9E9E9E', aff: 0 },
-  { n: '凡铁', c: '#B0BEC5', aff: 2 },
-  { n: '灵胚', c: '#4CAF50', aff: 3 },
-  { n: '玄铁', c: '#00897B', aff: 4 },
-  { n: '蕴灵', c: '#2196F3', aff: 5 },
-  { n: '通玄', c: '#3F51B5', aff: 6 },
-  { n: '地魄', c: '#9C27B0', aff: 7 },
-  { n: '天魂', c: '#E91E63', aff: 8 },
-  { n: '造化', c: '#FF9800', aff: 9 },
-  { n: '仙蜕', c: '#F44336', aff: 10 },
-  { n: '仙藏', c: '#D32F2F', aff: 11 },
-  { n: '道韵', c: '#FFD700', aff: 12 },
-  { n: '道极', c: '#C9A227', aff: 13 },
-  { n: '圣辉', c: '#00E5FF', aff: 14 },
-  { n: '圣域', c: '#AA00FF', aff: 15 },
+  { n: '凡品', c: '#9E9E9E', aff: 0 },
+  { n: '灵品', c: '#B0BEC5', aff: 2 },
+  { n: '玄品', c: '#4CAF50', aff: 3 },
+  { n: '地品', c: '#00897B', aff: 4 },
+  { n: '天品', c: '#2196F3', aff: 5 },
+  { n: '王品', c: '#3F51B5', aff: 6 },
+  { n: '皇品', c: '#9C27B0', aff: 7 },
+  { n: '帝品', c: '#E91E63', aff: 8 },
+  { n: '仙品', c: '#FF9800', aff: 9 },
+  { n: '神品', c: '#F44336', aff: 10 },
+  { n: '圣品', c: '#D32F2F', aff: 11 },
+  { n: '道品', c: '#FFD700', aff: 12 },
+  { n: '造化', c: '#C9A227', aff: 13 },
+  { n: '鸿蒙', c: '#00E5FF', aff: 14 },
+  { n: '太初', c: '#AA00FF', aff: 15 },
   { n: '混沌', c: '#FF6EC7', aff: 16 },
 ]
 export function qName(q: number): string { return QUALITIES[Math.max(0, Math.min(15, q - 1))].n }
@@ -35,21 +35,21 @@ export function qClass(q: number): string { return 'qc' + Math.max(1, Math.min(1
 // 星级权重 1..5
 export const STAR_W = [40, 30, 18, 9, 3]
 
-// 各部位基础名池
+// 各部位基础名池（第23批重构：按部位语义严选，杜绝「法袍叫铅盾」这类跨语义乱搭）
 export const SLOT_BASES: Record<SlotKey, string[]> = {
-  weapon: ['剑', '锋', '刃', '芒', '罡', '刀', '斩', '煞', '枪', '矛', '戟', '槊', '锤', '锏', '钺', '斧'],
-  armor: ['甲', '盾', '壁', '障', '魄'],
-  helm: ['镜', '轮', '盘', '鉴', '盖', '晶'],
-  wrist: ['珠', '轮', '盘', '鉴', '符', '箓', '印'],
-  belt: ['幡', '旗', '幢', '盖', '印', '玺'],
-  boots: ['珠', '丹', '晶', '魄', '琴', '瑟', '筝', '笛'],
+  weapon: ['剑', '刀', '枪', '戟', '矛', '槊', '斧', '钺', '锤', '锏', '鞭', '锋', '刃', '罡'],
+  armor: ['袍', '衣', '甲', '铠', '裳', '氅', '衫'],
+  helm: ['冠', '冕', '巾', '簪', '箍', '盔'],
+  wrist: ['镯', '钏', '环', '腕', '珠', '符', '印'],
+  belt: ['带', '绦', '幡', '旗', '印', '玺', '缨'],
+  boots: ['靴', '履', '屐'],
 }
-export const SWORD_BASES = ['剑', '锋', '刃', '芒', '罡']
-export const BODY_BASES = ['甲', '盾', '壁', '障', '魄']
+export const SWORD_BASES = ['剑', '锋', '刃', '罡']
+export const BODY_BASES = ['甲', '铠']
 
 // 前缀池（168 个，分四段）
 export const PREFIX_SEGS: string[][] = [
-  ['钝', '锈', '裂', '残', '粗', '拙', '朴', '旧', '暗', '灰', '白', '青', '黑', '铁', '石', '木', '骨', '皮', '麻', '布', '铜', '锡', '铅', '炭', '尘', '土', '沙', '泥', '苔', '藤', '竹', '草', '叶', '根', '角', '牙', '爪', '羽', '鳞'],
+  ['钝', '锈', '裂', '残', '粗', '拙', '朴', '旧', '暗', '灰', '白', '青', '黑', '铁', '石', '木', '骨', '皮', '麻', '布', '铜', '锡', '铅', '尘', '土', '藤', '竹', '草', '叶', '根', '角', '牙', '爪', '羽', '鳞'],
   ['蕴灵', '聚气', '引灵', '通玄', '幽光', '寒铁', '陨铁', '玄光', '青锋', '紫电', '赤炎', '冰魄', '风灵', '雷印', '土元', '金锋', '木灵', '水寒', '火舞', '云隐', '雾幻', '霞光', '星辉', '月华', '日精', '霜华', '露华', '雪魄', '雨霖', '虹霓', '流萤', '飞星', '落霞', '孤云', '野鹤', '清泉', '幽兰', '寒梅', '劲松', '修竹'],
   ['地藏', '山岳', '厚土', '天工', '星辰', '日月', '造化', '天罚', '神工', '仙蜕', '羽化', '登仙', '天罡', '地煞', '玄天', '紫霄', '青冥', '碧落', '黄泉', '幽冥', '血煞', '赤霄', '金阙', '玉京', '琼华', '瑶光', '璇玑', '太虚', '无极', '两仪', '四象', '五行', '六合', '七星', '八卦', '九宫', '混天', '乾坤', '阴阳', '太乙'],
   ['道韵', '无为', '太一', '混元', '太极', '道极', '圣辉', '光明', '神圣', '圣域', '天国', '神国', '混沌', '鸿蒙', '弑仙', '灭世', '斩道', '诛天', '开天', '辟地', '轮回', '因果', '永恒', '刹那', '须弥', '芥子', '光阴', '岁月', '命运', '天机', '玄黄', '宇宙', '洪荒', '亘古', '不朽', '长生', '不死', '超脱', '逍遥', '无始', '无终', '太初', '太素', '太易', '太始', '太清', '上清', '玉清'],
@@ -123,6 +123,12 @@ export const AFFIXES: AffixDef[] = [
   { k: 'resistCombo', n: '抗连击', tier: 2, min: 3, max: 7, pct: true },
   { k: 'resistCounter', n: '抗反击', tier: 2, min: 3, max: 7, pct: true },
   { k: 'resistLifesteal', n: '抗吸血', tier: 2, min: 4, max: 9, pct: true },
+  // —— 增伤 / 治疗 / 灵兽体系（参考寻道大千） ——
+  { k: 'dmgBoost', n: '增伤', tier: 2, min: 1.5, max: 3.5, pct: true },
+  { k: 'healBoost', n: '强化治疗', tier: 2, min: 3, max: 8, pct: true },
+  { k: 'healCut', n: '弱化治疗', tier: 2, min: 3, max: 8, pct: true },
+  { k: 'beastBoost', n: '强化灵兽', tier: 2, min: 3, max: 8, pct: true },
+  { k: 'beastCut', n: '弱化灵兽', tier: 2, min: 3, max: 8, pct: true },
 ]
 export const AFFIX_MAP: Record<string, AffixDef> = Object.fromEntries(AFFIXES.map(a => [a.k, a]))
 export const TOP_KEYS = AFFIXES.filter(a => a.tier === 3).map(a => a.k)
@@ -157,9 +163,9 @@ export const RUNES: RuneDef[] = [
 export const RUNE_MAP: Record<string, RuneDef> = Object.fromEntries(RUNES.map(r => [r.id, r]))
 
 // ===== 装备评分 =====
-// 评分口径与战力公式（calcPower：atk×10 / def×6 / hp×0.9 / spd×6，再乘百分比乘区）对齐，
-// 每个词条按其“对实际战力的边际贡献”计分。修复旧版“面值直接相加”的失真：
-// 旧版百分比词条仅 2~25 分、气血词条凭面值碾压一切、灵纹完全不算分。
+// 评分口径 = 「在当前装备等级下，这件装备对面板战力的边际贡献」（与 calcPower 同口径）。
+// 第23批修正：百分比词条曾被多乘一次均值系数 M（1.5×）——现统一为：
+//   固定值词条 × 战力乘区均值 M（会被乘区放大）；百分比词条 × 基准面板 raw（不受乘区放大）。
 export function scoreCoefs(lv: number) {
   const Ratk = baseAtk(lv), Rdef = baseDef(lv), Rhp = baseHp(lv)
   const M = 1.5 // 典型战斗系数（暴击/吸血等乘区的经验均值）
@@ -168,25 +174,29 @@ export function scoreCoefs(lv: number) {
 }
 export function affixCoef(k: string, lv: number): number {
   const c = scoreCoefs(lv)
+  const raw = c.core / c.M // 不含百分比乘区的基准面板
   switch (k) {
     case 'atk': return 10 * c.M
     case 'def': return 6 * c.M
     case 'hp': return 0.9 * c.M
     case 'spd': return 6 * c.M
-    case 'crit': case 'combo': case 'critDmg': return c.core / 150 // 与战力乘区同口径
-    case 'lifesteal': return c.core / 80
-    case 'dmgP': case 'dmgReduce': return c.core / 120
-    case 'armorPen': return c.core / 150
-    case 'execute': return c.core / 180
-    case 'dodge': case 'shieldPow': case 'devour': return c.core / 250
-    case 'reflect': case 'qiRegen': case 'cdr': return c.core / 300
-    case 'hit': return c.core / 400
-    case 'stun': case 'counter': return c.core / 240
-    case 'resistStun': case 'resistCrit': case 'resistCombo': case 'resistCounter': case 'resistLifesteal': return c.core / 320
-    case 'daoyun': return c.Ratk * 0.15 // 每回合按攻击力%追加伤害 ≈ 折算攻击
-    case 'kalpaFire': return c.Ratk * 0.075 // 半概率触发
-    case 'reincarnate': return c.core / 25 // 额外一条命
-    default: return c.core / 300
+    case 'crit': case 'combo': case 'critDmg': return raw / 150
+    case 'lifesteal': return raw / 80
+    case 'dmgP': case 'dmgReduce': return raw / 120
+    case 'armorPen': return raw / 150
+    case 'execute': return raw / 180
+    case 'dodge': case 'shieldPow': case 'devour': return raw / 250
+    case 'reflect': case 'qiRegen': case 'cdr': return raw / 300
+    case 'hit': return raw / 400
+    case 'stun': case 'counter': return raw / 240
+    case 'resistStun': case 'resistCrit': case 'resistCombo': case 'resistCounter': case 'resistLifesteal': return raw / 320
+    case 'dmgBoost': return raw / 130
+    case 'healBoost': case 'healCut': return raw / 300
+    case 'beastBoost': case 'beastCut': return raw / 320
+    case 'daoyun': return raw / 80
+    case 'kalpaFire': return raw / 130
+    case 'reincarnate': return raw / 25 // 额外一条命
+    default: return raw / 300
   }
 }
 export function runeScore(m: Mods, lv: number): number {

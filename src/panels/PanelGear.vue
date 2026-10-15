@@ -15,14 +15,14 @@
           <button v-if="g.clones.yangOpen" class="btn btn-xs" :class="g.clones.active === 'yang' ? 'btn-gold' : ''" @click="g.setActiveBody('yang')">
             阳神 · {{ fmt(g.bodyPower('yang')) }}
           </button>
-          <button v-else class="btn btn-xs" :class="g.major >= 5 ? 'btn-gold' : ''" :disabled="g.major < 5" title="化神期解锁 · 消耗 仙玉×300 + 灵脉石×10000" @click="g.openClone('yang')">
-            凝练阳神（仙玉300·灵脉石10000）
+          <button v-else class="btn btn-xs" :class="g.major >= 5 ? 'btn-gold' : ''" :disabled="g.major < 5" title="化神期解锁 · 消耗 仙玉×300 + 开脉石×10000" @click="g.openClone('yang')">
+            凝练阳神（仙玉300·开脉石10000）
           </button>
           <button v-if="g.clones.yinOpen" class="btn btn-xs" :class="g.clones.active === 'yin' ? 'btn-gold' : ''" @click="g.setActiveBody('yin')">
             阴身 · {{ fmt(g.bodyPower('yin')) }}
           </button>
-          <button v-else class="btn btn-xs" :class="g.major >= 5 && g.clones.yangOpen ? 'btn-gold' : ''" :disabled="g.major < 5 || !g.clones.yangOpen" :title="g.major < 5 ? '化神期解锁' : !g.clones.yangOpen ? '需先凝练阳神' : '消耗 仙玉×600 + 灵脉石×25000'" @click="g.openClone('yin')">
-            凝练阴身（仙玉600·灵脉石25000）
+          <button v-else class="btn btn-xs" :class="g.major >= 5 && g.clones.yangOpen ? 'btn-gold' : ''" :disabled="g.major < 5 || !g.clones.yangOpen" :title="g.major < 5 ? '化神期解锁' : !g.clones.yangOpen ? '需先凝练阳神' : '消耗 仙玉×600 + 开脉石×25000'" @click="g.openClone('yin')">
+            凝练阴身（仙玉600·开脉石25000）
           </button>
         </div>
         <div class="text-xs dim2 mt-1">分身拥有独立装备栏与共鸣；切换后长阶、论道台、副本等战斗自动沿用其配装，道基/灵兽/精怪/法宝/丹药共享。</div>
@@ -202,12 +202,13 @@
     <template v-else-if="tab === 'fam'">
       <div class="panel">
         <div class="panel-t">精 怪 · 出 战 位（{{ g.famEquipped.length }}/{{ g.famSlots }}） <span class="text-xs dim">境界提升解锁更多出战位</span></div>
-        <div class="text-xs dim">精怪为降服的小妖，坐镇出战位提供被动加成；升星 +25%/星、升级 +8%/级。</div>
+        <div class="text-xs dim">精怪出战位提供被动加成，并在战斗中自动触发专属战斗技（与灵兽主动出手不同）；升星 +25%/星、升级 +8%/级。</div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
           <div v-for="i in g.famSlots" :key="i" class="itemcard text-center">
             <template v-if="g.famEquipped[i - 1]">
               <div :class="'fam-r' + famDef(g.famEquipped[i - 1].fid).r" class="font-bold">{{ famDef(g.famEquipped[i - 1].fid).n }}</div>
               <div class="text-xs">Lv.{{ g.famEquipped[i - 1].level }} · {{ '★'.repeat(g.famEquipped[i - 1].stars) }}</div>
+              <div class="text-xs dim" :title="famDef(g.famEquipped[i - 1].fid).sk + '：' + famDef(g.famEquipped[i - 1].fid).skDesc">战技【{{ famDef(g.famEquipped[i - 1].fid).sk }}】</div>
               <div class="text-xs dim">{{ famPct(g.famEquipped[i - 1]) }}</div>
               <button class="btn btn-xs btn-red mt-1" @click="g.famUnequip(g.famEquipped[i - 1].id)">撤 下</button>
             </template>
@@ -234,7 +235,7 @@
                 <span class="chip ml-1">Lv.{{ f.level }}</span>
                 <span class="chip chip-gold ml-1">{{ '★'.repeat(f.stars) }}</span>
                 <span v-if="(g.fam.dupes[f.fid] || 0) > 0" class="chip chip-jade ml-1">同种×{{ g.fam.dupes[f.fid] }}</span>
-                <div class="text-xs dim mt-0.5">{{ famDef(f.fid).desc }} · 当前加成 ×{{ famPct(f) }}</div>
+                <div class="text-xs dim mt-0.5" :title="famDef(f.fid).sk + '：' + famDef(f.fid).skDesc">战技【{{ famDef(f.fid).sk }}】{{ famDef(f.fid).skDesc }} · 当前加成 ×{{ famPct(f) }}</div>
               </div>
               <div class="flex gap-1 shrink-0" @click.stop>
                 <button v-if="!isFamOn(f.id)" class="btn btn-xs btn-gold" @click="g.famEquip(f.id)">出战</button>
@@ -332,6 +333,7 @@ import { fmt } from '../core/format'
 import ItemCard from '../components/ItemCard.vue'
 import { FAM_MAP, FAM_RARITY, FAMILIARS, famScale } from '../data/familiars'
 import { beastAvgQual, beastGrade } from '../core/beast'
+import { procEffectText } from '../core/equip'
 import type { Beast, Familiar, SlotKey, Treasure } from '../types'
 
 function famDef(fid: string) { return FAM_MAP[fid] || FAMILIARS[0] }
@@ -345,14 +347,14 @@ function beastAvg(b: Beast): number {
 }
 
 function beastSkills(kind: string, stage: number): string {
-  const base = (BEAST_MAP[kind]?.procs || []).map(p => p.name)
-  const unlocked = BEAST_STAGE_SKILLS.slice(0, stage).map(p => p.name)
-  return [...base, ...unlocked].join('、') || '无'
+  const base = (BEAST_MAP[kind]?.procs || []).map(p => `${p.name}（${procEffectText(p)}）`)
+  const unlocked = BEAST_STAGE_SKILLS.slice(0, stage).map(p => `${p.name}（${procEffectText(p)}）`)
+  return [...base, ...unlocked].join(' · ') || '无'
 }
 void advCost
 void famLvCost
 function advCost(stage: number, lv: number) {
-  return { s: 20 * (stage + 1) * (stage + 1), l: Math.round(3000 * Math.pow(1.5, lv) * (stage + 1)) }
+  return { s: 20 * (stage + 1) * (stage + 1), l: Math.round(3000 * Math.pow(1.04069, lv) * (stage + 1)) }
 }
 
 const g = useGame()

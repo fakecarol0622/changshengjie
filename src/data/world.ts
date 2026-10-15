@@ -14,7 +14,7 @@ export interface DungeonDef {
   rewards: string
 }
 export const DUNGEONS: DungeonDef[] = [
-  { id: 'kuangku', n: '浮尘矿窟', type: '资源', desc: '矿脉纵横，可采灵脉石与粗矿', daily: 6, enemies: ['矿窟妖鼠', '石魈', '矿灵', '土行蜈'], rewards: '灵脉石、装备' },
+  { id: 'kuangku', n: '浮尘矿窟', type: '资源', desc: '矿脉纵横，可采开脉石与粗矿', daily: 6, enemies: ['矿窟妖鼠', '石魈', '矿灵', '土行蜈'], rewards: '开脉石、装备' },
   { id: 'jianzhong', n: '万剑冢', type: '装备', desc: '万剑埋骨之地，剑意森然', daily: 4, enemies: ['剑冢怨灵', '断剑老鬼', '守冢剑奴', '残锋战魂'], rewards: '攻击向装备、剑意' },
   { id: 'hantan', n: '星落寒潭', type: '装备', desc: '天外陨星坠处，寒气刺骨', daily: 4, enemies: ['寒潭水鬼', '星陨兽', '冰晶螭', '玄龟'], rewards: '防御向装备、星陨石' },
   { id: 'youlins', n: '万兽幽林', type: '灵兽', desc: '古林深处兽吼不绝', daily: 5, enemies: ['狂暴野猪', '赤目狼王', '幽林蟒', '三尾灵狐'], rewards: '灵兽蛋、兽魂' },
@@ -31,9 +31,9 @@ export const DUNGEONS: DungeonDef[] = [
 export interface DiffDef { n: string; mult: number; lvOff: number; rw: number }
 export const DIFFS: DiffDef[] = [
   { n: '普通', mult: 1, lvOff: 0, rw: 1 },
-  { n: '困难', mult: 1.5, lvOff: 2, rw: 1.8 },
-  { n: '噩梦', mult: 2.3, lvOff: 5, rw: 3 },
-  { n: '炼狱', mult: 3.6, lvOff: 9, rw: 5 },
+  { n: '困难', mult: 1.5, lvOff: 20, rw: 1.8 },
+  { n: '噩梦', mult: 2.3, lvOff: 52, rw: 3 },
+  { n: '炼狱', mult: 3.6, lvOff: 92, rw: 5 },
 ]
 
 // ---------- 活动日历（游戏月=10 天，压缩映射 GDD 每月窗口） ----------
@@ -91,17 +91,17 @@ export const WORLD_MSGS: string[] = [
 ]
 
 // ---------- 灵根 ----------
-export interface RootDef { n: string; mult: number; w: number; elems: number; desc: string }
+export interface RootDef { n: string; mult: number; w: number; elems: number; desc: string; c: string }
 export const ELEMS = ['金', '木', '水', '火', '土']
 export const SPIRIT_ROOTS: RootDef[] = [
-  { n: '五灵根', mult: 1.0, w: 40, elems: 5, desc: '五行俱全，资质平平，修行缓慢' },
-  { n: '四灵根', mult: 1.12, w: 25, elems: 4, desc: '资质平平，胜在根基全面' },
-  { n: '三灵根', mult: 1.25, w: 15, elems: 3, desc: '小有资质，可堪一修' },
-  { n: '双灵根', mult: 1.45, w: 10, elems: 2, desc: '双系同修，资质上佳' },
-  { n: '单灵根', mult: 1.8, w: 6, elems: 1, desc: '天资卓绝，修行一日千里' },
-  { n: '天灵根', mult: 2.3, w: 2.5, elems: 1, desc: '万中无一的绝世之资' },
-  { n: '变异灵根', mult: 2.6, w: 1.2, elems: 1, desc: '异种灵根，天生异象' },
-  { n: '混沌灵根', mult: 3.2, w: 0.3, elems: 5, desc: '传说中的至高灵根，演化混沌' },
+  { n: '五灵根', mult: 1.0, w: 40, elems: 5, desc: '五行俱全，资质平平，修行缓慢', c: '#9E9E9E' },
+  { n: '四灵根', mult: 1.12, w: 25, elems: 4, desc: '资质平平，胜在根基全面', c: '#8BC34A' },
+  { n: '三灵根', mult: 1.25, w: 15, elems: 3, desc: '小有资质，可堪一修', c: '#42A5F5' },
+  { n: '双灵根', mult: 1.45, w: 10, elems: 2, desc: '双系同修，资质上佳', c: '#AB47BC' },
+  { n: '单灵根', mult: 1.8, w: 6, elems: 1, desc: '天资卓绝，修行一日千里', c: '#FF9800' },
+  { n: '天灵根', mult: 2.3, w: 2.5, elems: 1, desc: '万中无一的绝世之资', c: '#F44336' },
+  { n: '变异灵根', mult: 2.6, w: 1.2, elems: 1, desc: '异种灵根，天生异象', c: '#FF6EC7' },
+  { n: '混沌灵根', mult: 3.2, w: 0.3, elems: 5, desc: '传说中的至高灵根，演化混沌', c: '#FFD700' },
 ]
 
 // ---------- 体质（觉醒） ----------
@@ -113,19 +113,14 @@ export const PHYSIQUES: PhysiqueDef[] = [
   { n: '太阳之体', w: 14, desc: '阳炎焚天，攻势凌厉', mods: { atkP: 12 } },
   { n: '剑体', w: 12, desc: '天生剑骨，剑意自生', mods: { atkP: 20, critAdd: 3 } },
   { n: '雷体', w: 10, desc: '雷霆淬体，迅疾如雷', mods: { spdP: 18, critAdd: 5 } },
+  { n: '龙体', w: 8, desc: '龙血淬炼，筋骨如龙', mods: { hpP: 18, atkP: 8 } },
+  { n: '琉璃佛体', w: 8, desc: '佛光护体，百邪不侵', mods: { dmgReduceAdd: 5, hpP: 10 } },
+  { n: '虚空道体', w: 6, desc: '身合虚空，来去无踪', mods: { spdP: 15, dodgeAdd: 6 } },
 ]
 export const PHYS_CHANCE = 0.08 // 初始觉醒概率
 
 // ---------- 出身 ----------
-export interface OriginDef { n: string; desc: string; attrs?: Record<string, number>; lingshi?: number; lingmai?: number; tech?: boolean }
-export const ORIGINS: OriginDef[] = [
-  { n: '散修弃婴', desc: '无依无靠，天养地育（气运+2，灵石+200）', attrs: { qiYun: 2 }, lingshi: 200 },
-  { n: '山村猎户', desc: '自幼山野，筋骨强健（根骨+2）', attrs: { genGu: 2 } },
-  { n: '没落世家', desc: '家道中落，尚有薄财（灵石+800，魅力+1）', attrs: { meiLi: 1 }, lingshi: 800 },
-  { n: '将门之后', desc: '军伍磨砺，胆识过人（根骨+1，神识+1）', attrs: { genGu: 1, shenShi: 1 } },
-  { n: '书香门第', desc: '幼读经史，慧根深种（悟性+2）', attrs: { wuXing: 2 } },
-  { n: '仙宗遗孤', desc: '宗门覆灭，流落人间（神识+1，悟性+1，带一本功法残卷）', attrs: { shenShi: 1, wuXing: 1 }, tech: true },
-]
+// （第26批已移除出身系统：开局不再选出身，主线改为单一《长生劫》长卷）
 
 // ---------- 奇遇 ----------
 export interface EncRes {
@@ -241,7 +236,7 @@ export const ENCOUNTERS: EncounterDef[] = [
     id: 'e12', q: 3, title: '灵脉暴走', text: '附近灵脉突然暴动，地涌灵潮，附近修士纷纷赶来。',
     options: [
       { label: '镇压灵脉', res: { text: '你施法镇压暴走的灵脉，灵潮退去前的馈赠尽入囊中。', lingmai: 30, gongDe: 5 } },
-      { label: '趁乱收灵', res: { text: '你趁乱收取了大把灵脉石，溜之大吉。', lingmai: 45, yeLi: 2 } },
+      { label: '趁乱收灵', res: { text: '你趁乱收取了大把开脉石，溜之大吉。', lingmai: 45, yeLi: 2 } },
     ],
   },
   {
@@ -268,7 +263,7 @@ export const ENCOUNTERS: EncounterDef[] = [
   {
     id: 'e16', q: 4, title: '天降陨星', text: '一颗流星划破夜空坠入山野，砸出丈许深坑，星核犹在灼热发光。',
     options: [
-      { label: '抢在他人之前取走', res: { text: '你抢先抱走星核，熔金的道路铺向远方。', mat: ['xingyunTie', 3], xingyun: 2 } },
+      { label: '抢在他人之前取走', res: { text: '你抢先抱走星核，熔金的道路铺向远方。', mat: ['xingyunTie', 3], xianyu: 2 } },
       { label: '就地吸纳星力', res: { text: '你盘膝坐于坑中，吸纳陨星余韵，体魄为之一新。', attr: ['genGu', 2] } },
     ],
   },
@@ -340,6 +335,132 @@ export const ENCOUNTERS: EncounterDef[] = [
     options: [
       { label: '聆听低语', res: { text: '低语灌入神魂，你窥见了轮回之外的碎片，天劫值随之翻涌。', reincP: 1, jieQi: 5 } },
       { label: '以道心镇之', res: { text: '你守心一念，低语渐渐沉寂。道心如磐石不可摧。', daoXin: 6 } },
+    ],
+  },
+  {
+    id: 'e27', q: 1, title: '古井铜钱', text: '废村古井幽深不见底，辘轳绳索尚新，井壁石缝里卡着几串旧铜钱。',
+    options: [
+      { label: '攀下井壁打捞', res: { text: '你顺着绳索下到井腰，摸到一串沉甸甸的铜钱，也算一桩小财。', lingshi: 90 } },
+      { label: '打水洗净井台', res: { text: '你打上几桶清水把井台冲洗干净——活水长流，是行人最后的体面。', gongDe: 3, daoXin: 1 } },
+    ],
+  },
+  {
+    id: 'e28', q: 1, title: '折翼白鹤', text: '芦苇荡里卧着一只白鹤，左翼折断，见人来也不飞，只是哀哀地叫。',
+    options: [
+      { label: '以灵液为它接骨', res: { text: '你以灵液理顺骨节，白鹤绕你三匝，衔来一株水灵灵的草。', gongDe: 4, mat: ['lingye', 1] } },
+      { label: '折其羽而归', res: { text: '鹤羽可作符笔材料，你下手时避开了它的眼睛。', mat: ['shougu', 2], yeLi: 2 } },
+    ],
+  },
+  {
+    id: 'e29', q: 1, title: '山村祭典', text: '山坳小村正办祭典，篝火通明，却见供桌下的影子扭动得不太对劲。',
+    options: [
+      { label: '出手驱散阴祟', res: { text: '你悄悄掐诀散去那股阴气，村长千恩万谢，塞来一袋灵石。', gongDe: 4, lingshi: 80 } },
+      { label: '趁乱顺走供品', res: { text: '供奉的灵果糕点进了你的储物袋，心里却有点不是滋味。', lingshi: 150, yeLi: 4 } },
+    ],
+  },
+  {
+    id: 'e30', q: 1, title: '石乳灵泉', text: '崖洞里垂着钟乳，一滴一滴凝出的石乳，正是炼丹的好药引。',
+    options: [
+      { label: '接取石乳', res: { text: '你候了半日，接满小半瓶石乳，晃一晃，灵光流转。', mat: ['lingye', 2] } },
+      { label: '就地饮下一口', res: { text: '石乳入喉清冽，修为如溪水般涨了一截。', cult: 60 } },
+    ],
+  },
+  {
+    id: 'e31', q: 2, title: '药农求助', text: '老药农蹲在崖边发愁：一株赤血参长在绝壁上，眼看就要过季了。',
+    options: [
+      { label: '攀崖替他采摘', res: { text: '你轻身攀上绝壁摘下赤血参，药农分出大半相赠。', mat: ['chishen', 3], gongDe: 3 } },
+      { label: '谈好分成再动手', res: { text: '你与药农谈妥分成后采下灵参，各取所需，皆大欢喜。', lingshi: 300 } },
+    ],
+  },
+  {
+    id: 'e32', q: 2, title: '夜半叩门', text: '荒郊野店，夜半忽有叩门声。门缝里递进一只染血的手：求你……救我。',
+    options: [
+      { label: '开门施救', res: { text: '你以灵药稳住他的伤势，伤者留下一块玉芝作为谢礼，趁夜色蹒跚离去。', gongDe: 6, mat: ['yuzhi', 2] } },
+      { label: '闭门不理', res: { text: '叩门声渐弱，终归于无。你一夜未眠，道心落了些尘。', daoXin: -1 } },
+    ],
+  },
+  {
+    id: 'e33', q: 2, title: '溪畔观棋', text: '溪边石枰上摆着半局残棋，一位老者独坐，执子而不落。',
+    options: [
+      { label: '落座对弈一局', res: { text: '一局终了，老者捋须而笑。你胸中块垒尽消，道心通明。', daoXin: 3 } },
+      { label: '请教棋理', res: { text: '老者以棋理喻道：「落子争先，如修行抢那一线先机。」你豁然开朗。', cult: 240 } },
+    ],
+  },
+  {
+    id: 'e34', q: 2, title: '灵芝崖', text: '悬崖石缝间生着一株紫纹灵芝，云梯难搭，唯有徒手攀上。',
+    options: [
+      { label: '冒险攀采', res: { text: '你攀至半途石屑簌簌而落，惊出一身冷汗，终将灵芝收入囊中。', mat: ['yuzhi', 3], hpPct: -8 } },
+      { label: '崖下打坐观云', res: { text: '你在崖下打坐半日，清风徐来，云卷云舒皆入心底。', daoXin: 1, cult: 160 } },
+    ],
+  },
+  {
+    id: 'e35', q: 3, title: '荒山剑冢', text: '荒山之上插满断剑，剑柄朝上，如一片沉默的碑林。中央一柄古剑兀自轻鸣。',
+    options: [
+      { label: '拔剑试锋', res: { text: '古剑应手而起，剑光如练——算你收了剑冢一份薄礼。', equipQ: [7, 10] } },
+      { label: '静坐感受剑意', res: { text: '你在剑冢间静坐一夜，万剑余意萦绕不去，修为与心境皆进。', daoXin: 2, cult: 0.4 } },
+    ],
+  },
+  {
+    id: 'e36', q: 3, title: '邪修交易', text: '黑袍修士拦住去路，摊开一枚玉简：「禁术一门，价码你懂。买，还是不买？」',
+    options: [
+      { label: '收下玉简', res: { text: '你收下玉简转身便走，身后传来诡异的笑声。夜半参研时，识海隐隐作痛。', techTier: 4, yeLi: 10 } },
+      { label: '严词拒绝', res: { text: '你拂袖而去，黑袍修士竟拱手相让：「好一副堂堂正道骨。」', daoXin: 3, gongDe: 3 } },
+    ],
+  },
+  {
+    id: 'e37', q: 3, title: '湖底沉船', text: '大旱三月，湖底露出一艘倾覆的古船，舱中隐约有宝光闪动。',
+    options: [
+      { label: '潜入舱底寻宝', res: { text: '你在淤泥里翻出两口樟木箱，箱中灵石与洗练石尚存。', lingshi: 800, xilian: 3 } },
+      { label: '打捞顺济灾民', res: { text: '你把船中金器尽数运出，散济沿岸灾民，功德无量。', gongDe: 10, lingmai: 15 } },
+    ],
+  },
+  {
+    id: 'e38', q: 3, title: '花海迷香', text: '不知名的花海一望无际，香气浓郁得让人头晕目眩。花心深处似有异种灵花。',
+    options: [
+      { label: '闭息穿行', res: { text: '你屏住呼吸穿过花海，心境历经幻象而不乱。', cult: 0.5 } },
+      { label: '采集异种花芯', res: { text: '你循香采得几枚异种花芯——那是传说中的还魂花。', mat: ['huanhun', 2] } },
+    ],
+  },
+  {
+    id: 'e39', q: 4, title: '上古传送阵', text: '谷底残存一座上古传送阵，阵纹断断续续，深处有幽光明明灭灭，通往未知。',
+    options: [
+      { label: '踏入阵中', res: { text: '一阵天旋地转，你被抛回原处，浑身焦糊，掌心却多了一枚轮回印记。', reincP: 1, hpPct: -15 } },
+      { label: '拆解研究阵纹', res: { text: '你花了三日拓下阵纹，符文石与仙玉散落一地，趁手收起。', mat: ['fuwen', 3], xianyu: 5 } },
+    ],
+  },
+  {
+    id: 'e40', q: 4, title: '剑意长河', text: '虚空之中一条剑意长河奔涌不休，河底沉着一枚枚剑丸，映出万般剑招。',
+    options: [
+      { label: '以身试剑', res: { text: '你纵身入河，剑气加身如刀割——待上岸时浑身是伤，筋骨却淬得更坚。', attr: ['genGu', 1], hpPct: -18 } },
+      { label: '捞取河中剑意', res: { text: '你以神识捞起数缕凝而不散的剑意，收进玉瓶。', mat: ['jianyi', 3], daoXin: 2 } },
+    ],
+  },
+  {
+    id: 'e41', q: 4, title: '红尘劫', text: '山下村镇疫病蔓延，一位老道摇头叹气：「此乃世间一段红尘劫，修士避之则道心渐冷。」',
+    options: [
+      { label: '留下守佑百姓', res: { text: '你施药问诊三月，疫病散去。临走时满村人跪送，功德如泉涌。', gongDe: 15, daoXin: 4 } },
+      { label: '转身继续修行', res: { text: '你悄然离去，把悲悯压进心底——所谓大道无情，不过是被压了太多次的眼泪。', yeLi: 5, cult: 0.8 } },
+    ],
+  },
+  {
+    id: 'e42', q: 5, title: '大道之音', text: '天地忽寂，一缕大道之音自虚空垂下，如晨钟晨鼓，直叩神魂。',
+    options: [
+      { label: '静心聆听', res: { text: '你闭目聆听至东方既白，道心澄澈如洗，修为一日千里。', daoXin: 6, cult: 1.0 } },
+      { label: '强行记谱', res: { text: '你强行将道音刻入神识，识海嗡鸣欲裂——却真的记下了一段残缺道章。', techTier: 6, jieQi: 4 } },
+    ],
+  },
+  {
+    id: 'e43', q: 5, title: '轮回之门', text: '断崖尽头悬着一道幽暗的门，门后是浓得化不开的轮回之水，看一眼便觉神魂不稳。',
+    options: [
+      { label: '推门窥轮回', res: { text: '你窥见了亿万个「你」，在亿万年里生灭轮回——轮回之力在血脉里苏醒。', reincP: 2, jieQi: 3 } },
+      { label: '回身而去', res: { text: '你收回手，长长吐出一口浊气：此生未完，何谈来世。道心愈发通透。', daoXin: 5 } },
+    ],
+  },
+  {
+    id: 'e44', q: 5, title: '飞升者残念', text: '云端残留着一缕飞升者的执念，依稀是个青衣背影，遥遥望向你：「后来者，可愿承吾道？」',
+    options: [
+      { label: '躬身承其道统', res: { text: '一缕浩荡道意灌顶而入，飞升者的道与名尽付于你，天劫值随之攀升。', techTier: 7, jieQi: 5 } },
+      { label: '为其立碑祭奠', res: { text: '你在云端以灵石立起一座无字碑：「前辈走好。」碑成之日，天地同悲。', gongDe: 20, daoXin: 4 } },
     ],
   },
 ]

@@ -9,9 +9,11 @@
             <span v-if="g.clones.active !== 'main'" class="chip chip-gold text-[10px] align-middle ml-1">出战·{{ g.activeBodyName }}</span>
           </div>
           <div class="text-xs dim">
-            灵根：<b class="jade">{{ g.root.n }}</b>（×{{ g.root.mult }}）
+            姓名 <b>{{ g.realName || '未取名' }}</b> · 道号 <b class="gold">{{ g.name }}</b>
+          </div>
+          <div class="text-xs dim">
+            灵根：<b :style="{ color: g.rootColor }">{{ g.root.n }}</b>（×{{ g.root.mult }}）
             <span v-if="g.physique"> · 体质：<b class="gold">{{ g.physique }}</b></span>
-            · 出身：{{ g.origin }}
           </div>
           <div class="flex items-center gap-1 flex-wrap mt-1">
             <span class="text-xs dim">命格</span>
@@ -88,10 +90,10 @@
       </div>
     </div>
 
-    <!-- 仙途日课 -->
+    <!-- 仙途福利 -->
     <div class="panel">
-      <div class="panel-t">仙 途 日 课 <span class="text-xs dim">每日福利，点开即领</span></div>
-      <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
+      <div class="panel-t">仙 途 福 利 <span class="text-xs dim">每日福利，点开即领</span></div>
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="!g.daily.daySigned ? 'btn-gold' : ''" @click="g.pushModal('signin')">
           <span class="text-base leading-none">📅</span><span class="text-[11px]">签到</span>
         </button>
@@ -107,24 +109,30 @@
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="isActiveNow ? 'btn-gold' : ''" @click="g.pushModal('activity')">
           <span class="text-base leading-none">🗓</span><span class="text-[11px]">活动</span>
         </button>
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="新手目标：达成即领奖励" @click="g.pushModal('goals')">
+          <span class="text-base leading-none">🎯</span><span class="text-[11px]">目标</span>
+        </button>
       </div>
     </div>
 
     <!-- 仙途万象 -->
     <div class="panel">
-      <div class="panel-t">仙 途 万 象 <span class="text-xs dim">天机阁与榜单 · 纪事与目标</span></div>
-      <div class="grid grid-cols-4 gap-2">
+      <div class="panel-t">仙 途 万 象 <span class="text-xs dim">天机阁与榜单 · 纪事与江湖</span></div>
+      <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="图鉴 / 称号 / 共鸣典藏" @click="props.go?.('codex')">
           <span class="text-base leading-none">📜</span><span class="text-[11px]">天机阁</span>
         </button>
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="天骄榜 / 论道台 / 众生百态" @click="props.go?.('social')">
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="天骄榜：天下修士战力排位" @click="g.openSocial('rank')">
           <span class="text-base leading-none">🏆</span><span class="text-[11px]">天骄榜</span>
+        </button>
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="论道台：消耗论道帖与修士论道" @click="g.openSocial('pvp')">
+          <span class="text-base leading-none">⚔</span><span class="text-[11px]">论道台</span>
+        </button>
+        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" title="众生百态：结交修士 / 指点 / 送礼" @click="g.openSocial('npc')">
+          <span class="text-base leading-none">👥</span><span class="text-[11px]">众生百态</span>
         </button>
         <button class="btn btn-sm flex-col !min-h-14 gap-0.5" :class="storyReady ? 'btn-gold' : ''" @click="g.pushModal('storybook')">
           <span class="text-base leading-none">📖</span><span class="text-[11px]">纪事</span>
-        </button>
-        <button class="btn btn-sm flex-col !min-h-14 gap-0.5" @click="g.pushModal('goals')">
-          <span class="text-base leading-none">🎯</span><span class="text-[11px]">目标</span>
         </button>
       </div>
     </div>
@@ -156,7 +164,6 @@ import { useGame, keyName, DAILY_TASKS, ROLLED_ATTRS } from '../stores/game'
 import { fmt, fmt1, fmtTime, pct } from '../core/format'
 import { modLines } from '../core/mods'
 import { ONLINE_REWARDS, PVP_TIERS, pvpRank, pvpTierIdx } from '../data/meta'
-import { STORY } from '../data/story'
 import { STAGE_MAX, stageBonus, stageEnemy, stageRewards, stageSeg } from '../data/stages'
 import { TRAIT_MAP } from '../data/traits'
 import { rewardBrief } from '../data/rewards'
@@ -187,7 +194,7 @@ const bundleReady = computed(() =>
   (!g.daily.daySigned && g.daily.newbieDay < 7) ||
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].some(n => g.major >= n && !g.daily.realmGifts.includes(n)),
 )
-const storyReady = computed(() => STORY.some(sc => !g.story.done.includes(sc.id) && g.storyCtxReady(sc.id)))
+const storyReady = computed(() => g.storyReadyAny)
 const isActiveNow = computed(() => !!g.activity)
 
 const now = ref(Date.now())
@@ -215,6 +222,8 @@ const statList = computed(() => {
     击晕率: pct(s.stun), 反击率: pct(s.counter),
     抗击晕: pct(s.resistStun), 抗暴击: pct(s.resistCrit), 抗连击: pct(s.resistCombo),
     抗反击: pct(s.resistCounter), 抗吸血: pct(s.resistLifesteal),
+    增伤: pct(s.dmgBoost), 强化治疗: pct(s.healBoost), 弱化治疗: pct(s.healCut),
+    强化灵兽: pct(s.beastBoost), 弱化灵兽: pct(s.beastCut),
   }
 })
 
